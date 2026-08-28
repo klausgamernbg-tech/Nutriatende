@@ -34,15 +34,30 @@ export async function GET(request: NextRequest) {
   const { page, limit, search, status, sort, order } = parsed.data;
   const offset = (page - 1) * limit;
 
+  // Build the select with subqueries for derived fields (single query, no N+1)
+  const selectQuery = `
+    *,
+    nutricionista:nutricionista_responsavel_id (nome),
+    ultima_consulta:consulta!paciente_id(data_hora) 
+      .filter(status,eq,realizada) 
+      .order(data_hora,desc) 
+      .limit(1)
+      .single(),
+    proximo_retorno:consulta!paciente_id(data_hora) 
+      .filter(status,in,(agendada,confirmada)) 
+      .filter(data_hora,gte,${new Date().toISOString()}) 
+      .order(data_hora,asc) 
+      .limit(1)
+      .single(),
+    ultima_medida:medidas!paciente_id(peso, imc) 
+      .order(data_avaliacao,desc) 
+      .limit(1)
+      .single()
+  `;
+
   let query = supabase
     .from('paciente')
-    .select(
-      `
-      *,
-      nutricionista:nutricionista_responsavel_id (nome)
-    `,
-      { count: 'exact' }
-    )
+    .select(selectQuery, { count: 'exact' })
     .order(sort, { ascending: order === 'asc' })
     .range(offset, offset + limit - 1);
 
@@ -60,56 +75,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Enrich with derived fields
-  const enriched = await Promise.all(
-    (data || []).map(async (paciente: any) => {
-      // Get latest consultation
-      const { data: ultimaConsulta } = await supabase
-        .from('consulta')
-        .select('data_hora')
-        .eq('paciente_id', paciente.id)
-        .eq('status', 'realizada')
-        .order('data_hora', { ascending: false })
-        .limit(1)
-        .single();
-
-      // Get next consultation
-      const { data: proximaConsulta } = await supabase
-        .from('consulta')
-        .select('data_hora')
-        .eq('paciente_id', paciente.id)
-        .in('status', ['agendada', 'confirmada'])
-        .gte('data_hora', new Date().toISOString())
-        .order('data_hora', { ascending: true })
-        .limit(1)
-        .single();
-
-      // Get latest measures
-      const { data: ultimaMedida } = await supabase
-        .from('medidas')
-        .select('peso, imc')
-        .eq('paciente_id', paciente.id)
-        .order('data_avaliacao', { ascending: false })
-        .limit(1)
-        .single();
-
-      return {
-        ...paciente,
-        idade: paciente.data_nascimento
-          ? Math.floor(
-              (Date.now() -
-                new Date(paciente.data_nascimento).getTime()) /
-                (365.25 * 24 * 60 * 60 * 1000)
-            )
-          : null,
-        ultima_consulta: ultimaConsulta?.data_hora || null,
-        proximo_retorno: proximaConsulta?.data_hora || null,
-        peso_atual: ultimaMedida?.peso || null,
-        imc_atual: ultimaMedida?.imc || null,
-        nutricionista_nome: paciente.nutricionista?.nome || null,
-      };
-    })
-  );
+  // Transform data to match expected format
+  const enriched = (data || []).map((paciente: any) => ({
+    ...paciente,
+    idade: paciente.data_nascimento
+      ? Math.floor(
+          (Date.now() - new Date(paciente.data_nascimento).getTime()) /
+            (365.25 * 24 * 60 * 60 * 1000)
+        )
+      : null,
+    ultima_consulta: paciente.ultima_consulta?.data_hora || null,
+    proximo_retorno: paciente.proximo_retorno?.data_hora || null,
+    peso_atual: paciente.ultima_medida?.peso || null,
+    imc_atual: paciente.ultima_medida?.imc || null,
+    nutricionista_nome: paciente.nutricionista?.nome || null,
+  }));
 
   return NextResponse.json({
     data: enriched,

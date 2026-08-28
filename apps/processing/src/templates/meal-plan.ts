@@ -2,6 +2,18 @@
 // Nutri Atende — Meal Plan HTML Template
 // ============================================================
 
+interface ClinicaConfig {
+  template_pdf?: {
+    cor_cabecalho?: string;
+    rodape_texto?: string;
+  };
+}
+
+interface ClinicaData {
+  nome?: string;
+  configuracoes?: ClinicaConfig;
+}
+
 interface PlanoData {
   titulo?: string;
   data_inicio: string;
@@ -13,7 +25,7 @@ interface PlanoData {
   observacoes?: string;
   paciente?: { nome: string; data_nascimento?: string };
   nutricionista?: { nome: string };
-  clinica?: { nome: string; configuracoes?: any };
+  clinica?: ClinicaData;
   itens?: Array<{
     refeicao: string;
     ordem: number;
@@ -28,7 +40,7 @@ interface PlanoData {
 }
 
 export function renderMealPlanHTML(plano: PlanoData): string {
-  const clinica = plano.clinica || {};
+  const clinica = plano.clinica || { nome: 'Nutri Atende', configuracoes: {} };
   const config = clinica.configuracoes?.template_pdf || {};
   const corCabecalho = config.cor_cabecalho || '#10B981';
   const rodapeTexto = config.rodape_texto || clinica.nome || 'Nutri Atende';

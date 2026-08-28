@@ -9,6 +9,10 @@ apps/web/.next/
 apps/web/out/
 apps/processing/dist/
 packages/shared/dist/
+*.tsbuildinfo
+
+# Backups
+*.bak
 
 # Environment variables (SENSITIVE)
 apps/web/.env.local

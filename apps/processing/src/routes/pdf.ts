@@ -5,7 +5,6 @@
 
 import type { FastifyInstance } from 'fastify';
 import { createClient } from '@supabase/supabase-js';
-import { renderFile } from '../templates/render.js';
 import { generateMealPlanPDF } from '../services/pdf-generator.js';
 
 const supabase = createClient(

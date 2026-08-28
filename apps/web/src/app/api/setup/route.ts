@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authLimiter } from "@/lib/rate-limiter";
 
 interface SetupBody {
   clinica_nome: string;
@@ -17,6 +18,23 @@ interface SetupBody {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const rateLimit = authLimiter(`setup:${ip}`);
+  
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Tente novamente mais tarde.' },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
+        }
+      }
+    );
+  }
+
   const supabase = await createClient();
   const admin = createAdminClient();
 

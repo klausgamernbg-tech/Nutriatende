@@ -9,59 +9,48 @@ import Link from 'next/link';
 export default async function DashboardPage() {
   const supabase = createClient();
 
-  // Fetch counts (simplified — in production would be more optimized)
+  const todayStart = new Date().toISOString().split('T')[0];
+  const tomorrowStart = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const now = new Date().toISOString();
+
+  // Fetch all data in parallel (single Promise.all)
   const [
     { count: totalPacientes },
     { count: consultasHoje },
     { count: consultasPendentes },
     { count: planosAtivos },
+    { data: consultasHojeList },
+    { data: pacientesRecentes },
   ] = await Promise.all([
-    supabase
-      .from('paciente')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'ativo'),
+    supabase.from('paciente').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
     supabase
       .from('consulta')
       .select('*', { count: 'exact', head: true })
-      .eq('data_hora', new Date().toISOString().split('T')[0])
+      .eq('data_hora', todayStart)
       .in('status', ['agendada', 'confirmada']),
     supabase
       .from('consulta')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'agendada')
-      .gte('data_hora', new Date().toISOString()),
+      .gte('data_hora', now),
     supabase
       .from('plano_alimentar')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'ativo'),
+    supabase
+      .from('consulta')
+      .select('*, paciente:paciente_id (nome, telefone)')
+      .gte('data_hora', todayStart)
+      .lt('data_hora', tomorrowStart)
+      .in('status', ['agendada', 'confirmada'])
+      .order('data_hora', { ascending: true })
+      .limit(10),
+    supabase
+      .from('paciente')
+      .select('id, nome, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
-
-  // Get today's consultations
-  const { data: consultasHojeList } = await supabase
-    .from('consulta')
-    .select(
-      `
-      *,
-      paciente:paciente_id (nome, telefone)
-    `
-    )
-    .gte('data_hora', new Date().toISOString().split('T')[0])
-    .lt(
-      'data_hora',
-      new Date(
-        Date.now() + 24 * 60 * 60 * 1000
-      ).toISOString().split('T')[0]
-    )
-    .in('status', ['agendada', 'confirmada'])
-    .order('data_hora', { ascending: true })
-    .limit(10);
-
-  // Get recent patients
-  const { data: pacientesRecentes } = await supabase
-    .from('paciente')
-    .select('id, nome, status, created_at')
-    .order('created_at', { ascending: false })
-    .limit(5);
 
   return (
     <div className="space-y-6">

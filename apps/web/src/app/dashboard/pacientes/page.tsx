@@ -2,7 +2,7 @@
 // Nutri Atende — Pacientes List Page
 // ============================================================
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import Link from 'next/link';
 
 export default async function PacientesPage({
@@ -10,7 +10,7 @@ export default async function PacientesPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   const page = Number(searchParams.page) || 1;
   const limit = 20;

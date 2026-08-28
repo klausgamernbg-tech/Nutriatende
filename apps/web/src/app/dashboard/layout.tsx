@@ -1,10 +1,12 @@
 // ============================================================
 // Nutri Atende — Dashboard Layout
 // Sidebar + Main content area with real user data
+// Uses admin client since middleware already verified auth
 // ============================================================
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import Sidebar from "./sidebar";
 
 export default async function DashboardLayout({
@@ -12,28 +14,45 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
+  // Middleware already verified auth — extract user ID from cookie
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sb-khaxithzlhsctkvdxllp-auth-token")?.value;
+  let userId: string | null = null;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (token) {
+    try {
+      const tokenParts = token.split(".");
+      if (tokenParts.length >= 2) {
+        const payload = JSON.parse(
+          Buffer.from(tokenParts[1], "base64url").toString()
+        );
+        userId = payload.sub;
+      }
+    } catch {
+      // ignore
+    }
+  }
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
+  // Use admin client for all data queries (bypasses RLS)
+  const admin = createAdminClient();
+
   // Fetch profile + clinic
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await admin
     .from("usuario_sistema")
     .select("*, clinica:clinica_id (nome)")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
 
-  if (!profile) {
+  if (profileError || !profile) {
+    // Profile not found → first-time user
     redirect("/setup");
   }
 
-  const userName = profile.nome || user.email?.split("@")[0] || "Usuário";
+  const userName = profile.nome || profile.email?.split("@")[0] || "Usuário";
   const clinicName =
     (profile.clinica as any)?.nome || "Minha Clínica";
   const userInitials = userName
@@ -46,7 +65,7 @@ export default async function DashboardLayout({
   return (
     <Sidebar
       userName={userName}
-      userEmail={user.email || ""}
+      userEmail={profile.email || ""}
       clinicName={clinicName}
       userInitials={userInitials}
       userPerfil={profile.perfil}

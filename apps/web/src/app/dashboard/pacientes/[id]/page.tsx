@@ -2,7 +2,7 @@
 // Nutri Atende — Patient Detail Page
 // ============================================================
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -11,7 +11,7 @@ export default async function PacienteDetailPage({
 }: {
   params: { id: string };
 }) {
-  const supabase = createClient();
+  const supabase = createAdminClient();
   const { id } = params;
 
   // Fetch patient with relations

@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Turbo
+.turbo/
+
+# Build outputs
+apps/web/.next/
+apps/web/out/
+apps/processing/dist/
+packages/shared/dist/
+
+# Environment variables (SENSITIVE)
+apps/web/.env.local
+apps/web/.env
+apps/processing/.env.local
+apps/processing/.env
+
+# Freebuff preview
+.freebuff/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase temp
+supabase/.temp/
+supabase/.branches/

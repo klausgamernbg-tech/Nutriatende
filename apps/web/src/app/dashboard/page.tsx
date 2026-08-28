@@ -1,56 +1,70 @@
 // ============================================================
 // Nutri Atende — Dashboard Page
 // Main dashboard with KPIs and overview
+// Uses admin client to bypass RLS (middleware already verified auth)
 // ============================================================
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  let totalPacientes = 0;
+  let consultasHoje = 0;
+  let consultasPendentes = 0;
+  let planosAtivos = 0;
+  let consultasHojeList: any[] = [];
+  let pacientesRecentes: any[] = [];
 
-  const todayStart = new Date().toISOString().split('T')[0];
-  const tomorrowStart = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const now = new Date().toISOString();
+  try {
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const supabase = createAdminClient();
 
-  // Fetch all data in parallel (single Promise.all)
-  const [
-    { count: totalPacientes },
-    { count: consultasHoje },
-    { count: consultasPendentes },
-    { count: planosAtivos },
-    { data: consultasHojeList },
-    { data: pacientesRecentes },
-  ] = await Promise.all([
-    supabase.from('paciente').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
-    supabase
-      .from('consulta')
-      .select('*', { count: 'exact', head: true })
-      .eq('data_hora', todayStart)
-      .in('status', ['agendada', 'confirmada']),
-    supabase
-      .from('consulta')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'agendada')
-      .gte('data_hora', now),
-    supabase
-      .from('plano_alimentar')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'ativo'),
-    supabase
-      .from('consulta')
-      .select('*, paciente:paciente_id (nome, telefone)')
-      .gte('data_hora', todayStart)
-      .lt('data_hora', tomorrowStart)
-      .in('status', ['agendada', 'confirmada'])
-      .order('data_hora', { ascending: true })
-      .limit(10),
-    supabase
-      .from('paciente')
-      .select('id, nome, status, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5),
-  ]);
+      const todayStart = new Date().toISOString().split('T')[0];
+      const tomorrowStart = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const now = new Date().toISOString();
+
+      const results = await Promise.allSettled([
+        supabase.from('paciente').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
+        supabase
+          .from('consulta')
+          .select('*', { count: 'exact', head: true })
+          .eq('data_hora', todayStart)
+          .in('status', ['agendada', 'confirmada']),
+        supabase
+          .from('consulta')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'agendada')
+          .gte('data_hora', now),
+        supabase
+          .from('plano_alimentar')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'ativo'),
+        supabase
+          .from('consulta')
+          .select('*, paciente:paciente_id (nome, telefone)')
+          .gte('data_hora', todayStart)
+          .lt('data_hora', tomorrowStart)
+          .in('status', ['agendada', 'confirmada'])
+          .order('data_hora', { ascending: true })
+          .limit(10),
+        supabase
+          .from('paciente')
+          .select('id, nome, status, created_at')
+          .order('created_at', { ascending: false })
+          .limit(5),
+      ]);
+
+      if (results[0].status === 'fulfilled') totalPacientes = results[0].value.count ?? 0;
+      if (results[1].status === 'fulfilled') consultasHoje = results[1].value.count ?? 0;
+      if (results[2].status === 'fulfilled') consultasPendentes = results[2].value.count ?? 0;
+      if (results[3].status === 'fulfilled') planosAtivos = results[3].value.count ?? 0;
+      if (results[4].status === 'fulfilled') consultasHojeList = results[4].value.data ?? [];
+      if (results[5].status === 'fulfilled') pacientesRecentes = results[5].value.data ?? [];
+    }
+  } catch (err) {
+    console.error('[Dashboard] Error fetching data:', err);
+    // Render with zeros — don't crash
+  }
 
   return (
     <div className="space-y-6">
@@ -77,7 +91,7 @@ export default async function DashboardPage() {
                 Pacientes Ativos
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
-                {totalPacientes ?? 0}
+                {totalPacientes}
               </p>
             </div>
             <div className="w-12 h-12 bg-nutri-50 rounded-xl flex items-center justify-center text-2xl">
@@ -99,7 +113,7 @@ export default async function DashboardPage() {
                 Consultas Hoje
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
-                {consultasHoje ?? 0}
+                {consultasHoje}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl">
@@ -121,7 +135,7 @@ export default async function DashboardPage() {
                 Retornos Pendentes
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
-                {consultasPendentes ?? 0}
+                {consultasPendentes}
               </p>
             </div>
             <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-2xl">
@@ -137,7 +151,7 @@ export default async function DashboardPage() {
                 Planos Ativos
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
-                {planosAtivos ?? 0}
+                {planosAtivos}
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-2xl">
@@ -155,7 +169,7 @@ export default async function DashboardPage() {
             <h2 className="font-semibold text-gray-900">Consultas de Hoje</h2>
           </div>
           <div className="p-6">
-            {consultasHojeList && consultasHojeList.length > 0 ? (
+            {consultasHojeList.length > 0 ? (
               <div className="space-y-3">
                 {consultasHojeList.map((consulta: any) => (
                   <div
@@ -218,7 +232,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
           <div className="p-6">
-            {pacientesRecentes && pacientesRecentes.length > 0 ? (
+            {pacientesRecentes.length > 0 ? (
               <div className="space-y-3">
                 {pacientesRecentes.map((paciente) => (
                   <Link

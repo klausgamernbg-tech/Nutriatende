@@ -106,6 +106,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Pass user ID to downstream server components via header
+  if (user) {
+    response.headers.set('x-user-id', user.id);
+  }
+
   return response;
 }
 

@@ -1,6 +1,6 @@
 // ============================================================
 // Nutri Atende — Configurações Page (client component)
-// Fetches profile via API route — handles missing profile
+// Fetches profile via API route — handles missing profile + edit
 // ============================================================
 
 'use client';
@@ -14,8 +14,10 @@ export default function ConfiguracoesPage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
   const [setupError, setSetupError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [error, setError] = useState('');
   const supabase = createClient();
   const router = useRouter();
@@ -44,9 +46,30 @@ export default function ConfiguracoesPage() {
           const data = await res.json();
           if (data.usuario_sistema) {
             setProfile(data.usuario_sistema);
+            // Pre-fill form with current data
+            const p = data.usuario_sistema;
+            const c = (p.clinica as any) || {};
+            // Parse endereco — could be JSON object or string
+            let enderecoStr = '';
+            let telefoneStr = '';
+            if (c.endereco) {
+              if (typeof c.endereco === 'object') {
+                enderecoStr = c.endereco.endereco || '';
+                telefoneStr = c.endereco.telefone || '';
+              } else {
+                enderecoStr = String(c.endereco);
+              }
+            }
+            if (c.telefone) telefoneStr = c.telefone;
+            setSetupForm({
+              clinica_nome: c.nome || '',
+              clinica_cnpj: c.cnpj || '',
+              clinica_endereco: enderecoStr,
+              clinica_telefone: telefoneStr,
+              nutricionista_nome: p.nome || '',
+            });
           } else if (data.needsSetup) {
             setNeedsSetup(true);
-            // Pre-fill with user email
             setSetupForm(prev => ({
               ...prev,
               nutricionista_nome: user.email?.split('@')[0] || '',
@@ -67,6 +90,7 @@ export default function ConfiguracoesPage() {
     e.preventDefault();
     setSetupLoading(true);
     setSetupError('');
+    setSuccessMsg('');
 
     try {
       const res = await fetch('/api/setup/create-profile', {
@@ -78,12 +102,16 @@ export default function ConfiguracoesPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setSetupError(data.error || 'Erro ao criar perfil');
+        setSetupError(data.error || 'Erro ao salvar perfil');
         return;
       }
 
-      // Reload profile
-      window.location.reload();
+      setSuccessMsg(data.updated ? 'Perfil atualizado com sucesso!' : 'Perfil criado com sucesso!');
+      setEditing(false);
+      setNeedsSetup(false);
+
+      // Reload to get fresh data
+      setTimeout(() => window.location.reload(), 800);
     } catch (err) {
       setSetupError('Erro de conexão');
     } finally {
@@ -106,6 +134,10 @@ export default function ConfiguracoesPage() {
 
       {error && (
         <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
+      )}
+
+      {successMsg && (
+        <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm">{successMsg}</div>
       )}
 
       {/* Setup form for users without profile */}
@@ -195,22 +227,132 @@ export default function ConfiguracoesPage() {
               disabled={setupLoading}
               className="w-full bg-nutri-600 text-white py-3 rounded-lg font-medium hover:bg-nutri-700 transition disabled:opacity-50"
             >
-              {setupLoading ? 'Configurando...' : 'Salvar e configurar 🚀'}
+              {setupLoading ? 'Salvando...' : 'Salvar e configurar 🚀'}
             </button>
           </form>
         </div>
       )}
 
-      {/* Profile */}
+      {/* Profile (editable) */}
       {!needsSetup && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">👤 Seu Perfil</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-900">👤 Seu Perfil</h2>
+            {!editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="text-sm text-nutri-600 hover:text-nutri-700 font-medium"
+              >
+                ✏️ Editar
+              </button>
+            )}
+          </div>
+
           {loading ? (
             <div className="flex items-center gap-2 text-gray-500">
               <div className="w-4 h-4 border-2 border-nutri-500 border-t-transparent rounded-full animate-spin" />
               <span className="text-sm">Carregando perfil...</span>
             </div>
+          ) : editing ? (
+            /* ---- EDIT MODE ---- */
+            <form onSubmit={handleSetup} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Seu nome completo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={setupForm.nutricionista_nome}
+                  onChange={(e) => setSetupForm(prev => ({ ...prev, nutricionista_nome: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nutri-500 focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome da Clínica *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={setupForm.clinica_nome}
+                  onChange={(e) => setSetupForm(prev => ({ ...prev, clinica_nome: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nutri-500 focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CNPJ <span className="text-gray-400">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={setupForm.clinica_cnpj}
+                    onChange={(e) => setSetupForm(prev => ({ ...prev, clinica_cnpj: e.target.value }))}
+                    placeholder="00.000.000/0000-00"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nutri-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefone <span className="text-gray-400">(opcional)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={setupForm.clinica_telefone}
+                    onChange={(e) => setSetupForm(prev => ({ ...prev, clinica_telefone: e.target.value }))}
+                    placeholder="(11) 99999-9999"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nutri-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Endereço <span className="text-gray-400">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={setupForm.clinica_endereco}
+                  onChange={(e) => setSetupForm(prev => ({ ...prev, clinica_endereco: e.target.value }))}
+                  placeholder="Rua, número, bairro, cidade - UF"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nutri-500 focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-500">Email</label>
+                <p className="font-medium text-gray-900">{profile?.email || '—'}</p>
+              </div>
+
+              {setupError && (
+                <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{setupError}</div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={setupLoading}
+                  className="px-6 py-2.5 bg-nutri-600 text-white font-medium rounded-lg hover:bg-nutri-700 transition disabled:opacity-50"
+                >
+                  {setupLoading ? 'Salvando...' : 'Salvar alterações'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(false);
+                    setSetupError('');
+                  }}
+                  className="px-6 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
           ) : profile ? (
+            /* ---- VIEW MODE ---- */
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

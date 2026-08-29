@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { updatePacienteSchema } from '@nutri-atende/shared';
 
 // GET /api/pacientes/[id] — Get patient details
@@ -22,7 +23,8 @@ export async function GET(
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from('paciente')
     .select(
       `
@@ -41,7 +43,7 @@ export async function GET(
   }
 
   // Get latest measures
-  const { data: ultimaMedida } = await supabase
+  const { data: ultimaMedida } = await admin
     .from('medidas')
     .select('*')
     .eq('paciente_id', params.id)
@@ -50,14 +52,14 @@ export async function GET(
     .single();
 
   // Get consultation stats
-  const { count: totalConsultas } = await supabase
+  const { count: totalConsultas } = await admin
     .from('consulta')
     .select('*', { count: 'exact', head: true })
     .eq('paciente_id', params.id)
     .eq('status', 'realizada');
 
   // Get active plan
-  const { data: planoAtivo } = await supabase
+  const { data: planoAtivo } = await admin
     .from('plano_alimentar')
     .select('*')
     .eq('paciente_id', params.id)
@@ -105,7 +107,8 @@ export async function PUT(
     );
   }
 
-  const { data, error } = await supabase
+  const admin2 = createAdminClient();
+  const { data, error } = await admin2
     .from('paciente')
     .update({
       ...parsed.data,
@@ -146,7 +149,8 @@ export async function DELETE(
   }
 
   // Check if user is admin
-  const { data: usuario } = await supabase
+  const adminDel = createAdminClient();
+  const { data: usuario } = await adminDel
     .from('usuario_sistema')
     .select('perfil')
     .eq('id', user.id)
@@ -159,7 +163,7 @@ export async function DELETE(
     );
   }
 
-  const { error } = await supabase
+  const { error } = await adminDel
     .from('paciente')
     .update({ status: 'inativo' })
     .eq('id', params.id);

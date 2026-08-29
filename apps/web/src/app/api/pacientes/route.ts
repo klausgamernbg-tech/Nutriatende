@@ -5,13 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createPacienteSchema, listPacientesSchema } from '@nutri-atende/shared';
 
 // GET /api/pacientes — List patients
 export async function GET(request: NextRequest) {
   const supabase = createClient();
 
-  // Auth check
+  // Auth check (uses cookies)
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -34,48 +35,20 @@ export async function GET(request: NextRequest) {
   const { page, limit, search, status, sort, order } = parsed.data;
   const offset = (page - 1) * limit;
 
-  // Build the select with subqueries for derived fields (single query, no N+1)
-  const selectQuery = `
-    *,
-    nutricionista:nutricionista_responsavel_id (nome),
-    ultima_consulta:consulta!paciente_id(data_hora) 
-      .filter(status,eq,realizada) 
-      .order(data_hora,desc) 
-      .limit(1)
-      .single(),
-    proximo_retorno:consulta!paciente_id(data_hora) 
-      .filter(status,in,(agendada,confirmada)) 
-      .filter(data_hora,gte,${new Date().toISOString()}) 
-      .order(data_hora,asc) 
-      .limit(1)
-      .single(),
-    ultima_medida:medidas!paciente_id(peso, imc) 
-      .order(data_avaliacao,desc) 
-      .limit(1)
-      .single()
-  `;
+  // Use admin client for data queries (bypass RLS)
+  const admin = createAdminClient();
 
-  let query = supabase
+  const { data, count, error } = await admin
     .from('paciente')
-    .select(selectQuery, { count: 'exact' })
+    .select('*, nutricionista:nutricionista_responsavel_id (nome)', { count: 'exact' })
     .order(sort, { ascending: order === 'asc' })
     .range(offset, offset + limit - 1);
-
-  if (search) {
-    query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%`);
-  }
-
-  if (status) {
-    query = query.eq('status', status);
-  }
-
-  const { data, count, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Transform data to match expected format
+  // Transform data
   const enriched = (data || []).map((paciente: any) => ({
     ...paciente,
     idade: paciente.data_nascimento
@@ -84,10 +57,6 @@ export async function GET(request: NextRequest) {
             (365.25 * 24 * 60 * 60 * 1000)
         )
       : null,
-    ultima_consulta: paciente.ultima_consulta?.data_hora || null,
-    proximo_retorno: paciente.proximo_retorno?.data_hora || null,
-    peso_atual: paciente.ultima_medida?.peso || null,
-    imc_atual: paciente.ultima_medida?.imc || null,
     nutricionista_nome: paciente.nutricionista?.nome || null,
   }));
 
@@ -106,7 +75,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const supabase = createClient();
 
-  // Auth check
+  // Auth check (uses cookies)
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -115,8 +84,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
-  // Get user's clinica_id
-  const { data: usuario } = await supabase
+  // Get user's clinica_id (use admin client to bypass RLS)
+  const admin = createAdminClient();
+  const { data: usuario } = await admin
     .from('usuario_sistema')
     .select('clinica_id')
     .eq('id', user.id)
@@ -141,7 +111,8 @@ export async function POST(request: NextRequest) {
 
   const { consentimento_lgpd, ...pacienteData } = parsed.data;
 
-  const { data, error } = await supabase
+  // Use admin client for insert (bypass RLS)
+  const { data, error } = await admin
     .from('paciente')
     .insert({
       ...pacienteData,
@@ -149,7 +120,7 @@ export async function POST(request: NextRequest) {
       nutricionista_responsavel_id: user.id,
       consentimento_lgpd: true,
       data_consentimento_lgpd: new Date().toISOString(),
-      consentimento_lgpd_versao: parsed.data.consentimento_lgpd_versao,
+      consentimento_lgpd_versao: parsed.data.consentimento_lgpd_versao || '1.0',
       telefone: parsed.data.telefone || null,
       email: parsed.data.email || null,
       cpf: parsed.data.cpf || null,

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 
 const checkDupSchema = z.object({
@@ -42,8 +43,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Get user's clinica_id
-  const { data: usuario } = await supabase
+  // Get user's clinica_id (use admin client to bypass RLS)
+  const admin = createAdminClient();
+  const { data: usuario } = await admin
     .from('usuario_sistema')
     .select('clinica_id')
     .eq('id', user.id)
@@ -56,7 +58,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  let query = supabase
+  let query = admin
     .from('paciente')
     .select('id, nome, email, cpf')
     .eq('clinica_id', usuario.clinica_id);

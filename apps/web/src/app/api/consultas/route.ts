@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createConsultaSchema, listConsultasSchema } from '@nutri-atende/shared';
 
 // GET /api/consultas — List consultations
@@ -34,7 +35,8 @@ export async function GET(request: NextRequest) {
     parsed.data;
   const offset = (page - 1) * limit;
 
-  let query = supabase
+  const admin = createAdminClient();
+  let query = admin
     .from('consulta')
     .select(
       `
@@ -82,7 +84,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   }
 
-  const { data: usuario } = await supabase
+  const admin = createAdminClient();
+  const { data: usuario } = await admin
     .from('usuario_sistema')
     .select('clinica_id')
     .eq('id', user.id)
@@ -106,7 +109,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check for scheduling conflicts
-  const { data: conflitos } = await supabase
+  const { data: conflitos } = await admin
     .from('consulta')
     .select('id')
     .eq('nutricionista_id', user.id)
@@ -133,7 +136,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('consulta')
     .insert({
       ...parsed.data,

@@ -64,13 +64,14 @@ export default function NovoPacientePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nome: form.nome,
-        data_nascimento: form.data_nascimento || null,
-        sexo: form.sexo || null,
-        telefone: form.telefone || null,
-        email: form.email || null,
-        cpf: form.cpf || null,
-        queixa_principal: form.queixa_principal || null,
-        tags: selectedTags.length > 0 ? selectedTags : null,
+        data_nascimento: form.data_nascimento || undefined,
+        sexo: form.sexo || undefined,
+        telefone: form.telefone || undefined,
+        email: form.email || undefined,
+        cpf: form.cpf || undefined,
+        queixa_principal: form.queixa_principal || undefined,
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        consentimento_lgpd: true,
       }),
     });
 

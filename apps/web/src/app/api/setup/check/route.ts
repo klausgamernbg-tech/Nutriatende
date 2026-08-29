@@ -21,8 +21,13 @@ export async function GET() {
     .eq('id', auth.userId)
     .single();
 
+  // If profile doesn't exist, return empty profile (not 404)
+  // This allows the configuracoes page to offer profile creation
   if (queryError || !usuario) {
-    return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 });
+    return NextResponse.json({
+      usuario_sistema: null,
+      needsSetup: true,
+    });
   }
 
   return NextResponse.json({ usuario_sistema: usuario });

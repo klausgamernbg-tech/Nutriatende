@@ -43,16 +43,15 @@ export const createPacienteSchema = z.object({
   sexo: z.enum(['M', 'F', 'Outro']).optional(),
   telefone: z
     .string()
-    .regex(phoneRegex, 'Telefone inválido. Formato: (XX) XXXXX-XXXX')
+    .max(20)
     .optional()
     .or(z.literal('')),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   cpf: z
     .string()
-    .regex(cpfRegex, 'CPF inválido. Formato: XXX.XXX.XXX-XX')
+    .max(20)
     .optional()
-    .or(z.literal(''))
-    .refine((val) => !val || isValidCPF(val), 'CPF com dígitos verificadores inválidos'),
+    .or(z.literal('')),
   queixa_principal: z.string().max(1000).optional(),
   tags: z.array(z.string().max(50)).max(10).optional(),
   consentimento_lgpd: z.literal(true, {

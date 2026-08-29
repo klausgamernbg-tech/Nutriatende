@@ -5,8 +5,8 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getAuthUser } from '@/lib/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,8 +19,16 @@ interface CreateProfileBody {
 }
 
 export async function POST(request: NextRequest) {
-  const { auth, error } = await getAuthUser();
-  if (error) return error;
+  // Auth check — use cookie-based client directly (no profile lookup needed)
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  }
 
   const body: CreateProfileBody = await request.json();
 
@@ -37,7 +45,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await admin
     .from('usuario_sistema')
     .select('id')
-    .eq('id', auth.userId)
+    .eq('id', user.id)
     .single();
 
   if (existing) {
@@ -70,10 +78,10 @@ export async function POST(request: NextRequest) {
 
   // 2. Create usuario_sistema
   const { error: usuarioError } = await admin.from('usuario_sistema').insert({
-    id: auth.userId,
+    id: user.id,
     clinica_id: clinica.id,
     nome: body.nutricionista_nome,
-    email: auth.usuario.email || '',
+    email: user.email || '',
     perfil: 'nutricionista',
     permissoes: {
       can_manage_users: true,
@@ -95,6 +103,6 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     success: true,
     clinica: { id: clinica.id, nome: body.clinica_nome },
-    usuario: { id: auth.userId, nome: body.nutricionista_nome },
+    usuario: { id: user.id, nome: body.nutricionista_nome },
   });
 }

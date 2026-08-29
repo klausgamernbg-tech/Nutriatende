@@ -52,7 +52,6 @@ export const createPacienteSchema = z.object({
     .max(20)
     .optional()
     .or(z.literal('')),
-  queixa_principal: z.string().max(1000).optional(),
   tags: z.array(z.string().max(50)).max(10).optional(),
   consentimento_lgpd: z.literal(true, {
     errorMap: () => ({ message: 'Consentimento LGPD é obrigatório' }),

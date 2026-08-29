@@ -69,7 +69,6 @@ export default function NovoPacientePage() {
         telefone: form.telefone || undefined,
         email: form.email || undefined,
         cpf: form.cpf || undefined,
-        queixa_principal: form.queixa_principal || undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         consentimento_lgpd: true,
       }),

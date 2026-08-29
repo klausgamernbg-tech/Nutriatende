@@ -58,36 +58,11 @@ export default function NovoPacientePage() {
     setLoading(true);
     setError(null);
 
-    // Get current user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setError('Usuário não autenticado');
-      setLoading(false);
-      return;
-    }
-
-    // Get user's clinica_id
-    const { data: usuario } = await supabase
-      .from('usuario_sistema')
-      .select('clinica_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!usuario) {
-      setError('Perfil de usuário não encontrado');
-      setLoading(false);
-      return;
-    }
-
-    // Create patient
-    const { data, error: insertError } = await supabase
-      .from('paciente')
-      .insert({
-        clinica_id: usuario.clinica_id,
-        nutricionista_responsavel_id: user.id,
+    // Create patient via API route (server handles clinica_id lookup)
+    const res = await fetch('/api/pacientes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         nome: form.nome,
         data_nascimento: form.data_nascimento || null,
         sexo: form.sexo || null,
@@ -96,26 +71,24 @@ export default function NovoPacientePage() {
         cpf: form.cpf || null,
         queixa_principal: form.queixa_principal || null,
         tags: selectedTags.length > 0 ? selectedTags : null,
-        consentimento_lgpd: true,
-        data_consentimento_lgpd: new Date().toISOString(),
-        consentimento_lgpd_versao: '1.0',
-      })
-      .select()
-      .single();
+      }),
+    });
 
-    if (insertError) {
-      if (insertError.code === '23505') {
+    const result = await res.json();
+
+    if (!res.ok) {
+      if (res.status === 409) {
         setError(
           'Já existe um paciente com este email ou CPF cadastrado nesta clínica'
         );
       } else {
-        setError(insertError.message);
+        setError(result.error || 'Erro ao criar paciente');
       }
       setLoading(false);
       return;
     }
 
-    router.push(`/dashboard/pacientes/${data.id}`);
+    router.push(`/dashboard/pacientes/${result.data.id}`);
   };
 
   return (

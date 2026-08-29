@@ -1,29 +1,36 @@
 // ============================================================
 // Nutri Atende — Configurações Page
+// Uses admin client like layout — reads x-user-id from header
 // ============================================================
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
 import LogoutButton from './logout-button';
 
 export default async function ConfiguracoesPage() {
-  const supabase = createAdminClient();
-
   let userId = '';
   try {
-    const { headers } = await import('next/headers');
     const headersList = headers();
     userId = typeof (headersList as any).get === 'function'
       ? (headersList as any).get('x-user-id') || ''
       : '';
-  } catch {
-    // fallback
-  }
+  } catch {}
 
-  const { data: profile } = await supabase
-    .from('usuario_sistema')
-    .select('*, clinica:clinica_id (id, nome, cnpj, endereco, telefone)')
-    .eq('id', userId)
-    .single();
+  let profile: any = null;
+
+  if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const supabase = createAdminClient();
+      const { data } = await supabase
+        .from('usuario_sistema')
+        .select('*, clinica:clinica_id (id, nome, cnpj, endereco, telefone)')
+        .eq('id', userId)
+        .single();
+      profile = data;
+    } catch (err) {
+      console.error('[Configuracoes] Error fetching profile:', err);
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">

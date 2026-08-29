@@ -28,19 +28,22 @@ export default function ConfiguracoesPage() {
 
         // Fetch via API to avoid RLS issues
         const res = await fetch('/api/setup/check');
-        const setupData = await res.json();
 
-        if (setupData.usuario_sistema) {
-          setProfile(setupData.usuario_sistema);
-        } else {
-          // Fallback: query directly
-          const { data } = await supabase
-            .from('usuario_sistema')
-            .select('*, clinica:clinica_id (id, nome, cnpj, endereco, telefone)')
-            .eq('id', user.id)
-            .single();
-          setProfile(data);
+        if (res.ok) {
+          const setupData = await res.json();
+          if (setupData.usuario_sistema) {
+            setProfile(setupData.usuario_sistema);
+            return;
+          }
         }
+
+        // Fallback: query directly
+        const { data } = await supabase
+          .from('usuario_sistema')
+          .select('*, clinica:clinica_id (id, nome, cnpj, endereco, telefone)')
+          .eq('id', user.id)
+          .single();
+        setProfile(data);
       } catch (err: any) {
         console.error('[Configuracoes] Error:', err);
         setError('Erro ao carregar perfil');

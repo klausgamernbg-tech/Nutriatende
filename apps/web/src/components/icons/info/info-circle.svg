@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+  <circle cx="12" cy="12" r="10" />
+  <path d="M9 12l2 2 4-4m5.618-4.016L19.97 9L20.38 19.97L9 12l-1.63-1.63-1.76 1.76z" />
+</svg>

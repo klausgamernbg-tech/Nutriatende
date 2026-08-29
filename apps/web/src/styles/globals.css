@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    /* Base colors */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -24,6 +25,8 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 142.1 76.2% 36.3%;
     --radius: 0.5rem;
+
+    /* Brand colors (Nutri green) */
     --nutri-50: 144 46% 97%;
     --nutri-100: 136 47% 88%;
     --nutri-200: 122 51% 81%;
@@ -34,6 +37,83 @@
     --nutri-700: 142 72% 27%;
     --nutri-800: 141 64% 24%;
     --nutri-900: 141 59% 21%;
+    --nutri-950: 5 46% 9%;
+
+    /* Semantic colors - Success */
+    --success: 158 64% 31%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 158 64% 93%;
+    --success-dark: 158 64% 22%;
+
+    /* Semantic colors - Warning */
+    --warning: 38 92% 44%;
+    --warning-foreground: 0 0% 100%;
+    --warning-light: 38 92% 95%;
+    --warning-dark: 38 92% 35%;
+
+    /* Semantic colors - Error */
+    --error: 0 84% 60%;
+    --error-foreground: 0 0% 100%;
+    --error-light: 0 84% 94%;
+    --error-dark: 0 84% 45%;
+
+    /* Semantic colors - Info */
+    --info: 221 83% 53%;
+    --info-foreground: 0 0% 100%;
+    --info-light: 221 83% 94%;
+    --info-dark: 221 83% 35%;
+
+    /* Surface colors */
+    --surface-level0: 0 0% 100%;
+    --surface-level1: 0 0% 98%;
+    --surface-level2: 0 0% 96%;
+    --surface-level3: 0 0% 90%;
+
+    /* Text colors */
+    --text-primary: 222 84% 5%;
+    --text-secondary: 215 25% 27%;
+    --text-tertiary: 215 16% 47%;
+    --text-inverse: 0 0% 100%;
+    --text-disabled: 214 20% 69%;
+    --text-link: 142 76% 36%;
+
+    /* Border colors */
+    --border-light: 0 0% 90%;
+    --border-focus: 142 76% 36%;
+    --border-error: 0 84% 60%;
+
+    /* Overlay */
+    --overlay: 222 84% 5% / 0.5;
+
+    /* Status colors */
+    --status-agendada-bg: 221 83% 94%;
+    --status-agendada-text: 221 83% 35%;
+    --status-agendada-border: 221 83% 53%;
+
+    --status-confirmada-bg: 158 64% 93%;
+    --status-confirmada-text: 158 64% 22%;
+    --status-confirmada-border: 158 64% 31%;
+
+    --status-realizada-bg: 136 47% 88%;
+    --status-realizada-text: 141 59% 21%;
+    --status-realizada-border: 110 54% 70%;
+
+    --status-cancelada-bg: 0 84% 94%;
+    --status-cancelada-text: 0 84% 45%;
+    --status-cancelada-border: 0 84% 60%;
+
+    --status-nao-compareceu-bg: 38 92% 95%;
+    --status-nao-compareceu-text: 38 92% 35%;
+    --status-nao-compareceu-border: 38 92% 44%;
+
+    --status-ativo-bg: 158 64% 93%;
+    --status-ativo-text: 158 64% 22%;
+
+    --status-manutencao-bg: 38 92% 95%;
+    --status-manutencao-text: 38 92% 35%;
+
+    --status-inativo-bg: 0 0% 96%;
+    --status-inativo-text: 0 0% 45%;
   }
 
   .dark {
@@ -56,6 +136,9 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 142.4 71.8% 29.2%;
+    --radius: 0.5rem;
+
+    /* Brand colors (Nutri green) - same in dark mode */
     --nutri-50: 144 46% 97%;
     --nutri-100: 136 47% 88%;
     --nutri-200: 122 51% 81%;
@@ -66,6 +149,83 @@
     --nutri-700: 142 72% 27%;
     --nutri-800: 141 64% 24%;
     --nutri-900: 141 59% 21%;
+    --nutri-950: 5 46% 9%;
+
+    /* Semantic colors - Success */
+    --success: 158 64% 40%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 158 64% 15%;
+    --success-dark: 158 64% 25%;
+
+    /* Semantic colors - Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-light: 38 92% 15%;
+    --warning-dark: 38 92% 30%;
+
+    /* Semantic colors - Error */
+    --error: 0 84% 55%;
+    --error-foreground: 0 0% 100%;
+    --error-light: 0 84% 15%;
+    --error-dark: 0 84% 30%;
+
+    /* Semantic colors - Info */
+    --info: 221 83% 60%;
+    --info-foreground: 0 0% 100%;
+    --info-light: 221 83% 15%;
+    --info-dark: 221 83% 30%;
+
+    /* Surface colors */
+    --surface-level0: 224 71% 4%;
+    --surface-level1: 224 71% 6%;
+    --surface-level2: 217 33% 10%;
+    --surface-level3: 217 33% 15%;
+
+    /* Text colors */
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20% 65%;
+    --text-tertiary: 215 14% 56%;
+    --text-inverse: 222 84% 5%;
+    --text-disabled: 217 33% 29%;
+    --text-link: 142 76% 58%;
+
+    /* Border colors */
+    --border-light: 217 33% 18%;
+    --border-focus: 142 76% 58%;
+    --border-error: 0 84% 55%;
+
+    /* Overlay */
+    --overlay: 0 0% 0% / 0.7;
+
+    /* Status colors */
+    --status-agendada-bg: 221 83% 15%;
+    --status-agendada-text: 221 83% 60%;
+    --status-agendada-border: 221 83% 30%;
+
+    --status-confirmada-bg: 158 64% 15%;
+    --status-confirmada-text: 158 64% 50%;
+    --status-confirmada-border: 158 64% 25%;
+
+    --status-realizada-bg: 136 47% 20%;
+    --status-realizada-text: 110 54% 70%;
+    --status-realizada-border: 122 51% 30%;
+
+    --status-cancelada-bg: 0 84% 15%;
+    --status-cancelada-text: 0 84% 55%;
+    --status-cancelada-border: 0 84% 30%;
+
+    --status-nao-compareceu-bg: 38 92% 15%;
+    --status-nao-compareceu-text: 38 92% 50%;
+    --status-nao-compareceu-border: 38 92% 30%;
+
+    --status-ativo-bg: 158 64% 15%;
+    --status-ativo-text: 158 64% 50%;
+
+    --status-manutencao-bg: 38 92% 15%;
+    --status-manutencao-text: 38 92% 50%;
+
+    --status-inativo-bg: 217 33% 10%;
+    --status-inativo-text: 217 33% 35%;
   }
 }
 
@@ -75,11 +235,111 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Focus visible for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Selection colors */
+  ::selection {
+    @apply bg-nutri-200 text-nutri-900;
+  }
+  .dark ::selection {
+    @apply bg-nutri-800 text-nutri-100;
+  }
+}
+
+@layer components {
+  /* Skeleton animation */
+  @keyframes skeleton-pulse {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden bg-neutral-200 dark:bg-neutral-800;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted) / 0.5) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-pulse 1.2s ease-in-out infinite;
+  }
+
+  /* Smooth transitions */
+  .transition-smooth {
+    @apply transition-all duration-200 ease-[cubic-bezier(0.2,0,0.38,0.9)];
+  }
+
+  .transition-fast {
+    @apply transition-all duration-150 ease-[cubic-bezier(0.2,0,0.38,0.9)];
+  }
+
+  /* Button press micro-interaction */
+  .press-scale:active {
+    @apply scale-[0.98];
+  }
+  .press-scale-card:active {
+    @apply scale-[0.99];
+  }
+
+  /* Scrollbar styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Touch target minimum */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  .touch-target-comfortable {
+    @apply min-h-[48px] min-w-[48px];
+  }
+
+  /* Glass morphism */
+  .glass {
+    @apply bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md;
+  }
+  .glass-strong {
+    @apply bg-white/90 dark:bg-neutral-900/90 backdrop-blur-lg;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-nutri-600 to-nutri-400 bg-clip-text text-transparent;
+  }
+  .dark .gradient-text {
+    @apply from-nutri-400 to-nutri-300;
   }
 }

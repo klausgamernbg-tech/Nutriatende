@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export default function SignupForm() {
   const [email, setEmail] = useState('');
@@ -12,7 +13,8 @@ export default function SignupForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  useEffect(() => { setSupabase(createClient()); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +33,7 @@ export default function SignupForm() {
 
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signUp({
+    const { error: authError } = await supabase!.auth.signUp({
       email,
       password,
       options: {

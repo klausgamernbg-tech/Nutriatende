@@ -5,30 +5,23 @@
 // ============================================================
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getAuthUser } from '@/lib/api-auth';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const supabase = createClient();
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
-  // Auth check
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
-
-  // Use admin client to bypass RLS
   const admin = createAdminClient();
-  const { data: usuario, error } = await admin
+  const { data: usuario, error: queryError } = await admin
     .from('usuario_sistema')
     .select('*, clinica:clinica_id (id, nome, cnpj, endereco, telefone)')
-    .eq('id', user.id)
+    .eq('id', auth.userId)
     .single();
 
-  if (error || !usuario) {
+  if (queryError || !usuario) {
     return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 });
   }
 

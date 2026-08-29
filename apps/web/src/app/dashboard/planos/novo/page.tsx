@@ -6,7 +6,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 export default function NovoPlanoPage() {
@@ -19,9 +18,9 @@ export default function NovoPlanoPage() {
     paciente_id: pacienteId,
     titulo: '',
     calorias_meta: '',
-    proteina_g: '',
-    carboidrato_g: '',
-    gordura_g: '',
+    proteinas_meta: '',
+    carboidratos_meta: '',
+    gorduras_meta: '',
     data_inicio: new Date().toISOString().split('T')[0],
     data_fim: '',
     observacoes: '',
@@ -30,12 +29,10 @@ export default function NovoPlanoPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from('paciente')
-      .select('id, nome')
-      .order('nome')
-      .then(({ data }) => setPacientes(data || []));
+    fetch('/api/pacientes/list')
+      .then((r) => r.json())
+      .then((json) => setPacientes(json.data || []))
+      .catch(() => setPacientes([]));
   }, []);
 
   // Auto-calculate macros from calories (default distribution)
@@ -45,9 +42,9 @@ export default function NovoPlanoPage() {
     setFormData((prev) => ({
       ...prev,
       calorias_meta: calorias,
-      proteina_g: String(Math.round((cal * 0.3) / 4)), // 30% protein
-      carboidrato_g: String(Math.round((cal * 0.45) / 4)), // 45% carbs
-      gordura_g: String(Math.round((cal * 0.25) / 9)), // 25% fat
+      proteinas_meta: String(Math.round((cal * 0.3) / 4)), // 30% protein
+      carboidratos_meta: String(Math.round((cal * 0.45) / 4)), // 45% carbs
+      gorduras_meta: String(Math.round((cal * 0.25) / 9)), // 25% fat
     }));
   };
 
@@ -57,31 +54,27 @@ export default function NovoPlanoPage() {
     setError('');
 
     try {
-      const supabase = createClient();
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError('Não autenticado');
-        return;
-      }
-
-      const { error: insertError } = await supabase.from('plano_alimentar').insert({
-        paciente_id: formData.paciente_id,
-        nutricionista_id: user.id,
-        titulo: formData.titulo || undefined,
-        calorias_meta: formData.calorias_meta ? Number(formData.calorias_meta) : undefined,
-        proteina_g: formData.proteina_g ? Number(formData.proteina_g) : undefined,
-        carboidrato_g: formData.carboidrato_g ? Number(formData.carboidrato_g) : undefined,
-        gordura_g: formData.gordura_g ? Number(formData.gordura_g) : undefined,
-        data_inicio: formData.data_inicio,
-        data_fim: formData.data_fim || undefined,
-        status: 'rascunho',
-        observacoes: formData.observacoes || undefined,
+      const res = await fetch('/api/planos-alimentares', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paciente_id: formData.paciente_id,
+          titulo: formData.titulo || undefined,
+          calorias_meta: formData.calorias_meta ? Number(formData.calorias_meta) : undefined,
+          proteinas_meta: formData.proteinas_meta ? Number(formData.proteinas_meta) : undefined,
+          carboidratos_meta: formData.carboidratos_meta ? Number(formData.carboidratos_meta) : undefined,
+          gorduras_meta: formData.gorduras_meta ? Number(formData.gorduras_meta) : undefined,
+          data_inicio: formData.data_inicio,
+          data_fim: formData.data_fim || undefined,
+          status: 'rascunho',
+          observacoes: formData.observacoes || undefined,
+        }),
       });
 
-      if (insertError) {
-        setError(insertError.message);
+      const result = await res.json();
+
+      if (!res.ok) {
+        setError(result.error || 'Erro ao criar plano');
         return;
       }
 
@@ -123,6 +116,11 @@ export default function NovoPlanoPage() {
               </option>
             ))}
           </select>
+          {pacientes.length === 0 && (
+            <p className="text-sm text-gray-400 mt-2">
+              Nenhum paciente encontrado. Cadastre um paciente primeiro.
+            </p>
+          )}
         </div>
 
         {/* Plan details */}
@@ -195,8 +193,8 @@ export default function NovoPlanoPage() {
                 </label>
                 <input
                   type="number"
-                  value={formData.proteina_g}
-                  onChange={(e) => setFormData({ ...formData, proteina_g: e.target.value })}
+                  value={formData.proteinas_meta}
+                  onChange={(e) => setFormData({ ...formData, proteinas_meta: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nutri-500 focus:border-transparent outline-none"
                 />
               </div>
@@ -206,8 +204,8 @@ export default function NovoPlanoPage() {
                 </label>
                 <input
                   type="number"
-                  value={formData.carboidrato_g}
-                  onChange={(e) => setFormData({ ...formData, carboidrato_g: e.target.value })}
+                  value={formData.carboidratos_meta}
+                  onChange={(e) => setFormData({ ...formData, carboidratos_meta: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nutri-500 focus:border-transparent outline-none"
                 />
               </div>
@@ -217,8 +215,8 @@ export default function NovoPlanoPage() {
                 </label>
                 <input
                   type="number"
-                  value={formData.gordura_g}
-                  onChange={(e) => setFormData({ ...formData, gordura_g: e.target.value })}
+                  value={formData.gorduras_meta}
+                  onChange={(e) => setFormData({ ...formData, gorduras_meta: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nutri-500 focus:border-transparent outline-none"
                 />
               </div>

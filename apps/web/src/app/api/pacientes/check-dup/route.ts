@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 const checkDupSchema = z.object({
   email: z.string().email().optional(),
   cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/).optional(),

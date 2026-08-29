@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authLimiter } from "@/lib/rate-limiter";
 
+export const dynamic = 'force-dynamic';
+
 interface SetupBody {
   clinica_nome: string;
   clinica_cnpj?: string;

@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 const createPlanoSchema = z.object({
   paciente_id: z.string().uuid(),
   consulta_id: z.string().uuid().optional(),

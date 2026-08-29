@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 const createAnamneseSchema = z.object({
   consulta_id: z.string().uuid(),
   paciente_id: z.string().uuid(),

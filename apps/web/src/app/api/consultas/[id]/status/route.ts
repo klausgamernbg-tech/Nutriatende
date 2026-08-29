@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 const updateStatusSchema = z.object({
   status: z.enum(['agendada', 'confirmada', 'realizada', 'cancelada', 'nao_compareceu']),
   motivo_cancelamento: z.string().max(500).optional(),

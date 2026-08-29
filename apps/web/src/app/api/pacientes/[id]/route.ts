@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { updatePacienteSchema } from '@nutri-atende/shared';
 import { getAuthUser } from '@/lib/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/pacientes/[id] — Get patient details
 export async function GET(
   request: NextRequest,

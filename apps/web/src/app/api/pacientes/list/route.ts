@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthUser } from '@/lib/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/pacientes/list?status=ativo — Lightweight patient list for dropdowns
 export async function GET(request: NextRequest) {
   const { auth, error } = await getAuthUser();

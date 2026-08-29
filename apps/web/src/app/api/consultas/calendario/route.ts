@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { getAuthUser } from '@/lib/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 const calendarQuerySchema = z.object({
   data_inicio: z.string().date(),
   data_fim: z.string().date(),

@@ -26,7 +26,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data: usuario, error: queryError } = await admin
     .from('usuario_sistema')
-    .select('*, clinica:clinica_id (id, nome, cnpj, endereco, telefone)')
+    .select('*, clinica:clinica_id (id, nome, cnpj, endereco, configuracoes)')
     .eq('id', user.id)
     .single();
 

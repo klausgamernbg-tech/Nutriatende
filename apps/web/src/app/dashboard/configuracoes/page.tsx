@@ -410,7 +410,7 @@ export default function ConfiguracoesPage() {
             </div>
             <div>
               <label className="text-sm text-gray-500">Telefone</label>
-              <p className="font-medium text-gray-900">{(profile.clinica as any)?.telefone || '—'}</p>
+              <p className="font-medium text-gray-900">{((profile.clinica as any)?.endereco as any)?.telefone || (profile.clinica as any)?.telefone || '—'}</p>
             </div>
           </div>
         </div>

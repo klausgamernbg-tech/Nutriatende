@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import ChangePassword from './change-password';
 
 export default function ConfiguracoesPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -103,6 +104,12 @@ export default function ConfiguracoesPage() {
         ) : (
           <p className="text-gray-400 text-sm">Perfil não encontrado</p>
         )}
+      </div>
+
+      {/* Password Change */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 className="font-semibold text-gray-900 mb-4">🔑 Alterar Senha</h2>
+        <ChangePassword />
       </div>
 
       {/* Clinic */}

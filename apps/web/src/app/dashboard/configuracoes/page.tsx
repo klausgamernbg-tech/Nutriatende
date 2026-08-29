@@ -406,11 +406,11 @@ export default function ConfiguracoesPage() {
             </div>
             <div>
               <label className="text-sm text-gray-500">Endereço</label>
-              <p className="font-medium text-gray-900">{(profile.clinica as any)?.endereco || '—'}</p>
+              <p className="font-medium text-gray-900">{typeof (profile.clinica as any)?.endereco === 'object' ? ((profile.clinica as any)?.endereco as any)?.endereco || '—' : (profile.clinica as any)?.endereco || '—'}</p>
             </div>
             <div>
               <label className="text-sm text-gray-500">Telefone</label>
-              <p className="font-medium text-gray-900">{((profile.clinica as any)?.endereco as any)?.telefone || (profile.clinica as any)?.telefone || '—'}</p>
+              <p className="font-medium text-gray-900">{typeof (profile.clinica as any)?.endereco === 'object' ? ((profile.clinica as any)?.endereco as any)?.telefone || '—' : '—'}</p>
             </div>
           </div>
         </div>

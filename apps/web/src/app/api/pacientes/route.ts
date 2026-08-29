@@ -4,22 +4,14 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createPacienteSchema, listPacientesSchema } from '@nutri-atende/shared';
+import { getAuthUser } from '@/lib/api-auth';
 
 // GET /api/pacientes — List patients
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
-
-  // Auth check (uses cookies)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const params = Object.fromEntries(searchParams.entries());
@@ -35,17 +27,17 @@ export async function GET(request: NextRequest) {
   const { page, limit, search, status, sort, order } = parsed.data;
   const offset = (page - 1) * limit;
 
-  // Use admin client for data queries (bypass RLS)
   const admin = createAdminClient();
 
-  const { data, count, error } = await admin
+  const { data, count, error: queryError } = await admin
     .from('paciente')
     .select('*, nutricionista:nutricionista_responsavel_id (nome)', { count: 'exact' })
+    .eq('clinica_id', auth.clinicaId)
     .order(sort, { ascending: order === 'asc' })
     .range(offset, offset + limit - 1);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (queryError) {
+    return NextResponse.json({ error: queryError.message }, { status: 500 });
   }
 
   // Transform data
@@ -73,31 +65,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/pacientes — Create patient
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
-
-  // Auth check (uses cookies)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
-
-  // Get user's clinica_id (use admin client to bypass RLS)
-  const admin = createAdminClient();
-  const { data: usuario } = await admin
-    .from('usuario_sistema')
-    .select('clinica_id')
-    .eq('id', user.id)
-    .single();
-
-  if (!usuario) {
-    return NextResponse.json(
-      { error: 'Perfil de usuário não encontrado' },
-      { status: 404 }
-    );
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const body = await request.json();
   const parsed = createPacienteSchema.safeParse(body);
@@ -109,15 +78,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const admin = createAdminClient();
   const { consentimento_lgpd, ...pacienteData } = parsed.data;
 
-  // Use admin client for insert (bypass RLS)
-  const { data, error } = await admin
+  const { data, error: insertError } = await admin
     .from('paciente')
     .insert({
       ...pacienteData,
-      clinica_id: usuario.clinica_id,
-      nutricionista_responsavel_id: user.id,
+      clinica_id: auth.clinicaId,
+      nutricionista_responsavel_id: auth.userId,
       consentimento_lgpd: true,
       data_consentimento_lgpd: new Date().toISOString(),
       consentimento_lgpd_versao: parsed.data.consentimento_lgpd_versao || '1.0',
@@ -128,8 +97,8 @@ export async function POST(request: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    if (error.code === '23505') {
+  if (insertError) {
+    if (insertError.code === '23505') {
       return NextResponse.json(
         {
           error:
@@ -138,7 +107,7 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
   return NextResponse.json({ data }, { status: 201 });

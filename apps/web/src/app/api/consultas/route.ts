@@ -4,21 +4,14 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createConsultaSchema, listConsultasSchema } from '@nutri-atende/shared';
+import { getAuthUser } from '@/lib/api-auth';
 
 // GET /api/consultas — List consultations
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const params = Object.fromEntries(searchParams.entries());
@@ -46,6 +39,7 @@ export async function GET(request: NextRequest) {
     `,
       { count: 'exact' }
     )
+    .eq('clinica_id', auth.clinicaId)
     .order(sort, { ascending: order === 'asc' })
     .range(offset, offset + limit - 1);
 
@@ -55,10 +49,10 @@ export async function GET(request: NextRequest) {
   if (data_inicio) query = query.gte('data_hora', data_inicio);
   if (data_fim) query = query.lte('data_hora', data_fim + 'T23:59:59');
 
-  const { data, count, error } = await query;
+  const { data, count, error: queryError } = await query;
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (queryError) {
+    return NextResponse.json({ error: queryError.message }, { status: 500 });
   }
 
   return NextResponse.json({
@@ -74,29 +68,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/consultas — Create consultation
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
-
-  const admin = createAdminClient();
-  const { data: usuario } = await admin
-    .from('usuario_sistema')
-    .select('clinica_id')
-    .eq('id', user.id)
-    .single();
-
-  if (!usuario) {
-    return NextResponse.json(
-      { error: 'Perfil de usuário não encontrado' },
-      { status: 404 }
-    );
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const body = await request.json();
   const parsed = createConsultaSchema.safeParse(body);
@@ -108,24 +81,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const admin = createAdminClient();
+
   // Check for scheduling conflicts
   const { data: conflitos } = await admin
     .from('consulta')
     .select('id')
-    .eq('nutricionista_id', user.id)
+    .eq('nutricionista_id', auth.userId)
     .neq('status', 'cancelada')
     .gte(
       'data_hora',
       new Date(
         new Date(parsed.data.data_hora).getTime() -
-          parsed.data.duracao_minutos * 60 * 1000
+          (parsed.data.duracao_minutos || 60) * 60 * 1000
       ).toISOString()
     )
     .lte(
       'data_hora',
       new Date(
         new Date(parsed.data.data_hora).getTime() +
-          parsed.data.duracao_minutos * 60 * 1000
+          (parsed.data.duracao_minutos || 60) * 60 * 1000
       ).toISOString()
     );
 
@@ -136,12 +111,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data, error } = await admin
+  const { data, error: insertError } = await admin
     .from('consulta')
     .insert({
       ...parsed.data,
-      nutricionista_id: user.id,
-      clinica_id: usuario.clinica_id,
+      nutricionista_id: auth.userId,
+      clinica_id: auth.clinicaId,
       status: 'agendada',
       status_pagamento: 'pendente',
       valor_pago: 0,
@@ -150,8 +125,8 @@ export async function POST(request: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
   return NextResponse.json({ data }, { status: 201 });

@@ -1,10 +1,11 @@
-// ============================================================
-// Nutri Atende — Dashboard Page
-// Main dashboard with KPIs and overview
-// Uses admin client to bypass RLS (middleware already verified auth)
-// ============================================================
+'use client';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { Card, CardHeader, CardTitle, CardContent } from '@/design-system/primitives/Card';
+import { Badge } from '@/design-system/primitives/Badge';
+import { Avatar } from '@/design-system/primitives/Avatar';
+import { EmptyState } from '@/design-system/primitives/EmptyState';
+import { LoadingState } from '@/design-system/primitives/LoadingState';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
@@ -63,16 +64,17 @@ export default async function DashboardPage() {
     }
   } catch (err) {
     console.error('[Dashboard] Error fetching data:', err);
-    // Render with zeros — don't crash
   }
 
   return (
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500">
-          Visão geral da sua clínica —{' '}
+        <h1 className="text-headline-sm font-semibold text-text-primary">
+          Dashboard
+        </h1>
+        <p className="text-body-sm text-text-secondary">
+          Visão geral da sua clínica{' '}
           {new Date().toLocaleDateString('pt-BR', {
             weekday: 'long',
             year: 'numeric',
@@ -84,110 +86,86 @@ export default async function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Pacientes Ativos
-              </p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {totalPacientes}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-nutri-50 rounded-xl flex items-center justify-center text-2xl">
-              👥
-            </div>
-          </div>
+        <Card variant="elevated" padding="md">
+          <CardHeader>
+            <CardTitle>Pacientes Ativos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-body-sm text-text-secondary">Total de pacientes com plano ativo</p>
+            <p className="text-2xl font-bold text-text-primary mt-2">{totalPacientes}</p>
+          </CardContent>
           <Link
             href="/dashboard/pacientes"
-            className="mt-3 text-sm text-nutri-600 hover:text-nutri-700 font-medium"
+            className="mt-2 text-body-sm text-text-tertiary hover:text-text-primary font-medium"
           >
             Ver todos →
           </Link>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Consultas Hoje
-              </p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {consultasHoje}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl">
-              📅
-            </div>
-          </div>
+        <Card variant="elevated" padding="md">
+          <CardHeader>
+            <CardTitle>Consultas Hoje</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-body-sm text-text-secondary">Consultas agendadas para hoje</p>
+            <p className="text-2xl font-bold text-text-primary mt-2">{consultasHoje}</p>
+          </CardContent>
           <Link
             href="/dashboard/agenda"
-            className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+            className="mt-2 text-body-sm text-text-tertiary hover:text-text-primary font-medium"
           >
             Ver agenda →
           </Link>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Retornos Pendentes
-              </p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {consultasPendentes}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-2xl">
-              ⏰
-            </div>
-          </div>
-        </div>
+        <Card variant="elevated" padding="md">
+          <CardHeader>
+            <CardTitle>Retornos Pendentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-body-sm text-text-secondary">Consultas aguardando retorno</p>
+            <p className="text-2xl font-bold text-text-primary mt-2">{consultasPendentes}</p>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Planos Ativos
-              </p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {planosAtivos}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-2xl">
-              🍽️
-            </div>
-          </div>
-        </div>
+        <Card variant="elevated" padding="md">
+          <CardHeader>
+            <CardTitle>Planos Ativos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-body-sm text-text-secondary">Planos alimentares ativos</p>
+            <p className="text-2xl font-bold text-text-primary mt-2">{planosAtivos}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's consultations */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900">Consultas de Hoje</h2>
-          </div>
-          <div className="p-6">
+        <Card variant="elevated" padding="md">
+          <CardHeader>
+            <CardTitle>Consultas de Hoje</CardTitle>
+          </CardHeader>
+          <CardContent>
             {consultasHojeList.length > 0 ? (
               <div className="space-y-3">
                 {consultasHojeList.map((consulta: any) => (
                   <div
                     key={consulta.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between rounded-lg border border-border-light dark:border-neutral-700 p-3 bg-surface-level1 dark:bg-surface-level1Dark"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="text-sm font-mono text-gray-500">
+                      <div className="text-sm font-mono text-text-secondary">
                         {new Date(consulta.data_hora).toLocaleTimeString(
                           'pt-BR',
                           { hour: '2-digit', minute: '2-digit' }
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-text-primary">
                           {consulta.paciente?.nome ?? 'Paciente'}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-body-sm text-text-secondary">
                           {consulta.tipo === 'primeira'
                             ? 'Primeira consulta'
                             : consulta.tipo === 'retorno'
@@ -196,63 +174,41 @@ export default async function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        consulta.status === 'confirmada'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {consulta.status === 'confirmada'
-                        ? 'Confirmada'
-                        : 'Agendada'}
-                    </span>
+                    <Badge status={consulta.status} />
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-center text-gray-500 py-8">
-                Nenhuma consulta agendada para hoje
-              </p>
+              <EmptyState
+                variant="search"
+                title="Nenhum resultado"
+                description="Não há consultas agendadas para hoje"
+              />
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Recent patients */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">
-              Pacientes Recentes
-            </h2>
-            <Link
-              href="/dashboard/pacientes"
-              className="text-sm text-nutri-600 hover:text-nutri-700 font-medium"
-            >
-              Ver todos →
-            </Link>
-          </div>
-          <div className="p-6">
+        <Card variant="elevated" padding="md">
+          <CardHeader>
+            <CardTitle>Pacientes Recentes</CardTitle>
+          </CardHeader>
+          <CardContent>
             {pacientesRecentes.length > 0 ? (
               <div className="space-y-3">
                 {pacientesRecentes.map((paciente) => (
                   <Link
                     key={paciente.id}
                     href={`/dashboard/pacientes/${paciente.id}`}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                    className="flex items-center justify-between rounded-lg border border-border-light dark:border-neutral-700 p-3 bg-surface-level1 dark:bg-surface-level1Dark transition"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-nutri-100 rounded-full flex items-center justify-center text-nutri-700 font-medium text-sm">
-                        {paciente.nome
-                          .split(' ')
-                          .map((n: string) => n[0])
-                          .slice(0, 2)
-                          .join('')}
-                      </div>
+                      <Avatar size="sm" name={paciente.nome} />
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-text-primary">
                           {paciente.nome}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-body-sm text-text-secondary">
                           Cadastrado em{' '}
                           {new Date(paciente.created_at).toLocaleDateString(
                             'pt-BR'
@@ -260,81 +216,70 @@ export default async function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        paciente.status === 'ativo'
-                          ? 'bg-green-100 text-green-700'
-                          : paciente.status === 'manutencao'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {paciente.status === 'ativo'
-                        ? 'Ativo'
-                        : paciente.status === 'manutencao'
-                        ? 'Manutenção'
-                        : 'Inativo'}
-                    </span>
+                    <Badge
+                      status={paciente.status}
+                      size="sm"
+                    />
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">Nenhum paciente cadastrado</p>
-                <Link
-                  href="/dashboard/pacientes/novo"
-                  className="inline-flex items-center px-4 py-2 bg-nutri-600 text-white rounded-lg hover:bg-nutri-700 transition"
-                >
-                  + Cadastrar primeiro paciente
-                </Link>
-              </div>
+              <EmptyState
+                variant="default"
+                title="Nenhum dado encontrado"
+                description="Não há pacientes cadastrados"
+              />
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Quick actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Link
-            href="/dashboard/pacientes/novo"
-            className="flex flex-col items-center gap-2 p-4 bg-nutri-50 rounded-xl hover:bg-nutri-100 transition"
-          >
-            <span className="text-2xl">➕</span>
-            <span className="text-sm font-medium text-nutri-700">
-              Novo Paciente
-            </span>
-          </Link>
-          <Link
-            href="/dashboard/agenda"
-            className="flex flex-col items-center gap-2 p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition"
-          >
-            <span className="text-2xl">📅</span>
-            <span className="text-sm font-medium text-blue-700">
-              Nova Consulta
-            </span>
-          </Link>
-          <Link
-            href="/dashboard/planos"
-            className="flex flex-col items-center gap-2 p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition"
-          >
-            <span className="text-2xl">📋</span>
-            <span className="text-sm font-medium text-purple-700">
-              Criar Plano
-            </span>
-          </Link>
-          <Link
-            href="/dashboard/prontuario"
-            className="flex flex-col items-center gap-2 p-4 bg-amber-50 rounded-xl hover:bg-amber-100 transition"
-          >
-            <span className="text-2xl">📁</span>
-            <span className="text-sm font-medium text-amber-700">
-              Prontuário
-            </span>
-          </Link>
-        </div>
-      </div>
+      <Card variant="elevated" padding="md">
+        <CardHeader>
+          <CardTitle>Ações Rápidas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Link
+              href="/dashboard/pacientes/novo"
+              className="flex flex-col items-center gap-2 rounded-xl border border-border-light dark:border-neutral-700 bg-surface-level1 dark:bg-surface-level1Dark p-4 hover:bg-surface-level2 dark:hover:bg-surface-level2 transition"
+            >
+              <span className="text-2xl text-text-primary">➕</span>
+              <span className="text-body-sm font-medium text-text-primary">
+                Novo Paciente
+              </span>
+            </Link>
+            <Link
+              href="/dashboard/agenda"
+              className="flex flex-col items-center gap-2 rounded-xl border border-border-light dark:border-neutral-700 bg-surface-level1 dark:bg-surface-level1Dark p-4 hover:bg-surface-level2 dark:hover:bg-surface-level2 transition"
+            >
+              <span className="text-2xl text-text-primary">📅</span>
+              <span className="text-body-sm font-medium text-text-primary">
+                Nova Consulta
+              </span>
+            </Link>
+            <Link
+              href="/dashboard/planos"
+              className="flex flex-col items-center gap-2 rounded-xl border border-border-light dark:border-neutral-700 bg-surface-level1 dark:bg-surface-level1Dark p-4 hover:bg-surface-level2 dark:hover:bg-surface-level2 transition"
+            >
+              <span className="text-2xl text-text-primary">📋</span>
+              <span className="text-body-sm font-medium text-text-primary">
+                Criar Plano
+              </span>
+            </Link>
+            <Link
+              href="/dashboard/prontuario"
+              className="flex flex-col items-center gap-2 rounded-xl border border-border-light dark:border-neutral-700 bg-surface-level1 dark:bg-surface-level1Dark p-4 hover:bg-surface-level2 dark:hover:bg-surface-level2 transition"
+            >
+              <span className="text-2xl text-text-primary">📁</span>
+              <span className="text-body-sm font-medium text-text-primary">
+                Prontuário
+              </span>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -4,9 +4,9 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
+import { getAuthUser } from '@/lib/api-auth';
 
 const checkDupSchema = z.object({
   email: z.string().email().optional(),
@@ -15,15 +15,8 @@ const checkDupSchema = z.object({
 
 // GET /api/pacientes/check-dup — Check duplicate
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const params = Object.fromEntries(searchParams.entries());
@@ -43,25 +36,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Get user's clinica_id (use admin client to bypass RLS)
   const admin = createAdminClient();
-  const { data: usuario } = await admin
-    .from('usuario_sistema')
-    .select('clinica_id')
-    .eq('id', user.id)
-    .single();
-
-  if (!usuario) {
-    return NextResponse.json(
-      { error: 'Perfil de usuário não encontrado' },
-      { status: 404 }
-    );
-  }
-
   let query = admin
     .from('paciente')
     .select('id, nome, email, cpf')
-    .eq('clinica_id', usuario.clinica_id);
+    .eq('clinica_id', auth.clinicaId);
 
   if (parsed.data.email && parsed.data.cpf) {
     query = query.or(`email.eq.${parsed.data.email},cpf.eq.${parsed.data.cpf}`);
@@ -71,10 +50,10 @@ export async function GET(request: NextRequest) {
     query = query.eq('cpf', parsed.data.cpf!);
   }
 
-  const { data, error } = await query.limit(1);
+  const { data, error: queryError } = await query.limit(1);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (queryError) {
+    return NextResponse.json({ error: queryError.message }, { status: 500 });
   }
 
   return NextResponse.json({

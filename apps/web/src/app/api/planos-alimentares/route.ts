@@ -4,8 +4,9 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
+import { getAuthUser } from '@/lib/api-auth';
 
 const createPlanoSchema = z.object({
   paciente_id: z.string().uuid(),
@@ -23,15 +24,8 @@ const createPlanoSchema = z.object({
 
 // GET /api/planos-alimentares?paciente_id=xxx — List plans
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const pacienteId = searchParams.get('paciente_id');
@@ -43,14 +37,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error: queryError } = await admin
     .from('plano_alimentar')
     .select('*')
     .eq('paciente_id', pacienteId)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (queryError) {
+    return NextResponse.json({ error: queryError.message }, { status: 500 });
   }
 
   return NextResponse.json({ data });
@@ -58,15 +53,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/planos-alimentares — Create plan
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const body = await request.json();
   const parsed = createPlanoSchema.safeParse(body);
@@ -78,25 +66,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const admin = createAdminClient();
+
   // Deactivate any existing active plan for this patient
-  await supabase
+  await admin
     .from('plano_alimentar')
     .update({ status: 'finalizado' })
     .eq('paciente_id', parsed.data.paciente_id)
     .eq('status', 'ativo');
 
-  const { data, error } = await supabase
+  const { data, error: insertError } = await admin
     .from('plano_alimentar')
     .insert({
       ...parsed.data,
-      nutricionista_id: user.id,
+      nutricionista_id: auth.userId,
+      clinica_id: auth.clinicaId,
       status: 'rascunho',
     })
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
   return NextResponse.json({ data }, { status: 201 });

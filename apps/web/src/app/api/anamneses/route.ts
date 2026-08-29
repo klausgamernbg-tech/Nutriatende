@@ -4,8 +4,9 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
+import { getAuthUser } from '@/lib/api-auth';
 
 const createAnamneseSchema = z.object({
   consulta_id: z.string().uuid(),
@@ -42,15 +43,8 @@ const updateAnamneseSchema = z.object({
 
 // GET /api/anamneses?consulta_id=xxx — Get anamnese by consultation
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const consultaId = searchParams.get('consulta_id');
@@ -59,17 +53,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'consulta_id é obrigatório' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error: queryError } = await admin
     .from('anamnese')
     .select('*')
     .eq('consulta_id', consultaId)
     .single();
 
-  if (error) {
-    if (error.code === 'PGRST116') {
+  if (queryError) {
+    if (queryError.code === 'PGRST116') {
       return NextResponse.json({ data: null }, { status: 200 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: queryError.message }, { status: 500 });
   }
 
   return NextResponse.json({ data });
@@ -77,15 +72,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/anamneses — Create anamnese
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const body = await request.json();
   const parsed = createAnamneseSchema.safeParse(body);
@@ -97,20 +85,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error: insertError } = await admin
     .from('anamnese')
     .insert(parsed.data)
     .select()
     .single();
 
-  if (error) {
-    if (error.code === '23505') {
+  if (insertError) {
+    if (insertError.code === '23505') {
       return NextResponse.json(
         { error: 'Anamnese já existe para esta consulta' },
         { status: 409 }
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
   return NextResponse.json({ data }, { status: 201 });
@@ -118,15 +107,8 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/anamneses — Update anamnese (by consulta_id)
 export async function PUT(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const consultaId = searchParams.get('consulta_id');
@@ -145,15 +127,16 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const admin = createAdminClient();
+  const { data, error: updateError } = await admin
     .from('anamnese')
     .update(parsed.data)
     .eq('consulta_id', consultaId)
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
   return NextResponse.json({ data });

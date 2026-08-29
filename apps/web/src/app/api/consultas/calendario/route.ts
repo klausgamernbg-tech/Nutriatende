@@ -4,8 +4,9 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
+import { getAuthUser } from '@/lib/api-auth';
 
 const calendarQuerySchema = z.object({
   data_inicio: z.string().date(),
@@ -15,15 +16,8 @@ const calendarQuerySchema = z.object({
 
 // GET /api/consultas/calendario — Get consultations for calendar
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const { searchParams } = new URL(request.url);
   const params = Object.fromEntries(searchParams.entries());
@@ -38,18 +32,18 @@ export async function GET(request: NextRequest) {
 
   const { data_inicio, data_fim, nutricionista_id } = parsed.data;
 
-  let query = supabase
+  const admin = createAdminClient();
+  let query = admin
     .from('consulta')
-    .select(
-      `
+    .select(`
       id,
       data_hora,
       duracao_minutos,
       tipo,
       status,
       paciente:paciente_id (id, nome)
-    `
-    )
+    `)
+    .eq('clinica_id', auth.clinicaId)
     .gte('data_hora', data_inicio)
     .lte('data_hora', data_fim + 'T23:59:59')
     .neq('status', 'cancelada')
@@ -59,10 +53,10 @@ export async function GET(request: NextRequest) {
     query = query.eq('nutricionista_id', nutricionista_id);
   }
 
-  const { data, error } = await query;
+  const { data, error: queryError } = await query;
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (queryError) {
+    return NextResponse.json({ error: queryError.message }, { status: 500 });
   }
 
   // Transform for calendar display

@@ -4,38 +4,30 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { updatePacienteSchema } from '@nutri-atende/shared';
+import { getAuthUser } from '@/lib/api-auth';
 
 // GET /api/pacientes/[id] — Get patient details
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const admin = createAdminClient();
-  const { data, error } = await admin
+  const { data, error: queryError } = await admin
     .from('paciente')
-    .select(
-      `
+    .select(`
       *,
       nutricionista:nutricionista_responsavel_id (id, nome, email)
-    `
-    )
+    `)
     .eq('id', params.id)
+    .eq('clinica_id', auth.clinicaId)
     .single();
 
-  if (error || !data) {
+  if (queryError || !data) {
     return NextResponse.json(
       { error: 'Paciente não encontrado' },
       { status: 404 }
@@ -87,15 +79,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   const body = await request.json();
   const parsed = updatePacienteSchema.safeParse(body);
@@ -107,8 +92,8 @@ export async function PUT(
     );
   }
 
-  const admin2 = createAdminClient();
-  const { data, error } = await admin2
+  const admin = createAdminClient();
+  const { data, error: updateError } = await admin
     .from('paciente')
     .update({
       ...parsed.data,
@@ -117,17 +102,18 @@ export async function PUT(
       cpf: parsed.data.cpf || null,
     })
     .eq('id', params.id)
+    .eq('clinica_id', auth.clinicaId)
     .select()
     .single();
 
-  if (error) {
-    if (error.code === '23505') {
+  if (updateError) {
+    if (updateError.code === '23505') {
       return NextResponse.json(
         { error: 'Já existe um paciente com este email ou CPF' },
         { status: 409 }
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
   return NextResponse.json({ data });
@@ -138,22 +124,15 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-  }
+  const { auth, error } = await getAuthUser();
+  if (error) return error;
 
   // Check if user is admin
-  const adminDel = createAdminClient();
-  const { data: usuario } = await adminDel
+  const admin = createAdminClient();
+  const { data: usuario } = await admin
     .from('usuario_sistema')
     .select('perfil')
-    .eq('id', user.id)
+    .eq('id', auth.userId)
     .single();
 
   if (usuario?.perfil !== 'admin') {
@@ -163,13 +142,14 @@ export async function DELETE(
     );
   }
 
-  const { error } = await adminDel
+  const { error: deleteError } = await admin
     .from('paciente')
     .update({ status: 'inativo' })
-    .eq('id', params.id);
+    .eq('id', params.id)
+    .eq('clinica_id', auth.clinicaId);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
   return NextResponse.json({ message: 'Paciente inativado com sucesso' });

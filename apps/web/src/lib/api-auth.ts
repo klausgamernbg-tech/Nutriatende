@@ -55,7 +55,18 @@ export async function getAuthUser(): Promise<
     }
 
     // Step 2: Get user profile from usuario_sistema via admin client
-    const admin = createAdminClient();
+    let admin;
+    try {
+      admin = createAdminClient();
+    } catch (e: any) {
+      console.error('[API Auth] Admin client error:', e.message);
+      return {
+        error: NextResponse.json(
+          { error: 'Erro de configuração do servidor', details: e.message },
+          { status: 500 }
+        ),
+      };
+    }
     const { data: usuario, error: profileError } = await admin
       .from('usuario_sistema')
       .select('id, clinica_id, nome, email, perfil')

@@ -1,36 +1,60 @@
 // ============================================================
-// Nutri Atende — Configurações Page
-// Uses admin client like layout — reads x-user-id from header
+// Nutri Atende — Configurações Page (client component)
+// Fetches profile via API route — avoids RLS/header issues
 // ============================================================
 
-import { createAdminClient } from '@/lib/supabase/admin';
-import { headers } from 'next/headers';
-import LogoutButton from './logout-button';
+'use client';
 
-export default async function ConfiguracoesPage() {
-  let userId = '';
-  try {
-    const headersList = headers();
-    userId = typeof (headersList as any).get === 'function'
-      ? (headersList as any).get('x-user-id') || ''
-      : '';
-  } catch {}
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
-  let profile: any = null;
+export default function ConfiguracoesPage() {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const supabase = createClient();
+  const router = useRouter();
 
-  if (userId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const supabase = createAdminClient();
-      const { data } = await supabase
-        .from('usuario_sistema')
-        .select('*, clinica:clinica_id (id, nome, cnpj, endereco, telefone)')
-        .eq('id', userId)
-        .single();
-      profile = data;
-    } catch (err) {
-      console.error('[Configuracoes] Error fetching profile:', err);
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
+        // Fetch via API to avoid RLS issues
+        const res = await fetch('/api/setup/check');
+        const setupData = await res.json();
+
+        if (setupData.usuario_sistema) {
+          setProfile(setupData.usuario_sistema);
+        } else {
+          // Fallback: query directly
+          const { data } = await supabase
+            .from('usuario_sistema')
+            .select('*, clinica:clinica_id (id, nome, cnpj, endereco, telefone)')
+            .eq('id', user.id)
+            .single();
+          setProfile(data);
+        }
+      } catch (err: any) {
+        console.error('[Configuracoes] Error:', err);
+        setError('Erro ao carregar perfil');
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+    loadProfile();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -39,10 +63,19 @@ export default async function ConfiguracoesPage() {
         <p className="text-gray-500">Gerencie seu perfil e configurações da clínica</p>
       </div>
 
+      {error && (
+        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
+      )}
+
       {/* Profile */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h2 className="font-semibold text-gray-900 mb-4">👤 Seu Perfil</h2>
-        {profile ? (
+        {loading ? (
+          <div className="flex items-center gap-2 text-gray-500">
+            <div className="w-4 h-4 border-2 border-nutri-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm">Carregando perfil...</span>
+          </div>
+        ) : profile ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -56,9 +89,7 @@ export default async function ConfiguracoesPage() {
               <div>
                 <label className="text-sm text-gray-500">Perfil</label>
                 <p className="font-medium text-gray-900 capitalize">
-                  {profile.perfil === 'nutricionista'
-                    ? 'Nutricionista'
-                    : profile.perfil || '—'}
+                  {profile.perfil === 'nutricionista' ? 'Nutricionista' : profile.perfil || '—'}
                 </p>
               </div>
               <div>
@@ -70,7 +101,7 @@ export default async function ConfiguracoesPage() {
             </div>
           </div>
         ) : (
-          <p className="text-gray-500">Carregando...</p>
+          <p className="text-gray-400 text-sm">Perfil não encontrado</p>
         )}
       </div>
 
@@ -81,27 +112,19 @@ export default async function ConfiguracoesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-gray-500">Nome</label>
-              <p className="font-medium text-gray-900">
-                {(profile.clinica as any)?.nome || '—'}
-              </p>
+              <p className="font-medium text-gray-900">{(profile.clinica as any)?.nome || '—'}</p>
             </div>
             <div>
               <label className="text-sm text-gray-500">CNPJ</label>
-              <p className="font-medium text-gray-900">
-                {(profile.clinica as any)?.cnpj || '—'}
-              </p>
+              <p className="font-medium text-gray-900">{(profile.clinica as any)?.cnpj || '—'}</p>
             </div>
             <div>
               <label className="text-sm text-gray-500">Endereço</label>
-              <p className="font-medium text-gray-900">
-                {(profile.clinica as any)?.endereco || '—'}
-              </p>
+              <p className="font-medium text-gray-900">{(profile.clinica as any)?.endereco || '—'}</p>
             </div>
             <div>
               <label className="text-sm text-gray-500">Telefone</label>
-              <p className="font-medium text-gray-900">
-                {(profile.clinica as any)?.telefone || '—'}
-              </p>
+              <p className="font-medium text-gray-900">{(profile.clinica as any)?.telefone || '—'}</p>
             </div>
           </div>
         </div>
@@ -124,13 +147,18 @@ export default async function ConfiguracoesPage() {
         </div>
       </div>
 
-      {/* Danger zone */}
+      {/* Logout */}
       <div className="bg-white rounded-xl shadow-sm border border-red-100 p-6">
         <h2 className="font-semibold text-red-700 mb-4">⚠️ Sair da conta</h2>
         <p className="text-sm text-gray-600 mb-4">
           Ao sair, você será redirecionado para a tela de login.
         </p>
-        <LogoutButton />
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+        >
+          🚪 Sair da conta
+        </button>
       </div>
     </div>
   );

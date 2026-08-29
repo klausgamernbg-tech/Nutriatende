@@ -4,19 +4,11 @@
 // ============================================================
 
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect('/dashboard');
-  } else {
-    redirect('/login');
-  }
+  // Simple redirect: if user has session cookie, go to dashboard, otherwise login
+  // Middleware handles the actual auth check
+  redirect('/login');
 }

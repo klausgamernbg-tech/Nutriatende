@@ -1,12 +1,12 @@
 // ============================================================
 // Nutri Atende — Agenda Page (Interactive Calendar)
 // Client component with monthly view, day selection, consultations
+// Uses API routes for RLS-safe data fetching
 // ============================================================
 
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 interface Consulta {
@@ -38,7 +38,6 @@ function toDateStr(d: Date) {
 }
 
 export default function AgendaPage() {
-  const supabase = createClient();
   const now = new Date();
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
@@ -46,22 +45,36 @@ export default function AgendaPage() {
   const [consultas, setConsultas] = useState<Consulta[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch consultations for current month
+  // Fetch consultations for current month via API
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const firstDay = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-      const lastDay = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${getDaysInMonth(currentYear, currentMonth)}`;
+      try {
+        const firstDay = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+        const lastDay = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${getDaysInMonth(currentYear, currentMonth)}`;
 
-      const { data } = await supabase
-        .from('consulta')
-        .select('*, paciente:paciente_id (id, nome)')
-        .gte('data_hora', firstDay)
-        .lte('data_hora', lastDay + 'T23:59:59')
-        .order('data_hora', { ascending: true });
+        const res = await fetch(
+          `/api/consultas/calendario?data_inicio=${firstDay}&data_fim=${lastDay}`
+        );
 
-      setConsultas(data || []);
-      setLoading(false);
+        if (res.ok) {
+          const result = await res.json();
+          // Transform API response to match Consulta interface
+          const mapped = (result.data || []).map((e: any) => ({
+            id: e.id,
+            data_hora: e.start,
+            tipo: e.tipo,
+            status: e.status,
+            valor: null,
+            paciente: e.paciente,
+          }));
+          setConsultas(mapped);
+        }
+      } catch (err) {
+        console.error('[Agenda] Error:', err);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [currentYear, currentMonth]);
@@ -148,10 +161,7 @@ export default function AgendaPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Month Navigation */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <button
-                onClick={prevMonth}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
+              <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
                 <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
@@ -159,10 +169,7 @@ export default function AgendaPage() {
               <h2 className="text-lg font-semibold text-gray-900">
                 {MONTH_NAMES[currentMonth]} {currentYear}
               </h2>
-              <button
-                onClick={nextMonth}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
+              <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
                 <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -210,7 +217,6 @@ export default function AgendaPage() {
                     >
                       {day}
                     </span>
-                    {/* Consultation dots */}
                     {hasConsultas && (
                       <div className="flex gap-0.5 mt-0.5 flex-wrap">
                         {dayConsultas.slice(0, 3).map((c, j) => (
@@ -280,10 +286,7 @@ export default function AgendaPage() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-bold text-gray-900">
-                          {new Date(c.data_hora).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {new Date(c.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -302,14 +305,11 @@ export default function AgendaPage() {
                           {c.status === 'cancelada' && 'Cancelada'}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-gray-700">
-                        {c.paciente?.nome ?? 'Paciente'}
-                      </p>
+                      <p className="text-sm font-medium text-gray-700">{c.paciente?.nome ?? 'Paciente'}</p>
                       <p className="text-xs text-gray-500 mt-1">
                         {c.tipo === 'primeira' && '📋 Primeira consulta'}
                         {c.tipo === 'retorno' && '🔄 Retorno'}
                         {c.tipo === 'avaliação' && '📊 Avaliação'}
-                        {c.valor != null && ` • R$ ${c.valor.toFixed(2)}`}
                       </p>
                     </Link>
                   ))}

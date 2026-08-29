@@ -9,7 +9,7 @@ import { z } from 'zod';
 // ============================================================
 
 export const createMedidasSchema = z.object({
-  consulta_id: z.string().uuid('ID da consulta inválido'),
+  consulta_id: z.string().uuid('ID da consulta inválido').optional(),
   paciente_id: z.string().uuid('ID do paciente inválido'),
   peso: z
     .number()

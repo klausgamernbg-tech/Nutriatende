@@ -76,6 +76,7 @@ function NovaConsultaContent() {
         return;
       }
 
+      router.refresh();
       router.push('/dashboard/consultas');
     } catch (err: any) {
       setError(err.message || 'Erro ao criar consulta');

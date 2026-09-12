@@ -91,9 +91,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch updated profile to return
+    const { data: updatedProfile } = await admin
+      .from('usuario_sistema')
+      .select('*, clinica:clinica_id (id, nome, cnpj, endereco)')
+      .eq('id', user.id)
+      .single();
+
     return NextResponse.json({
       success: true,
       updated: true,
+      usuario_sistema: updatedProfile || null,
       clinica: { id: existing.clinica_id, nome: body.clinica_nome },
       usuario: { id: user.id, nome: body.nutricionista_nome },
     });
@@ -143,9 +151,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao criar perfil do usuário' }, { status: 500 });
   }
 
+  // Fetch created profile to return
+  const { data: createdProfile } = await admin
+    .from('usuario_sistema')
+    .select('*, clinica:clinica_id (id, nome, cnpj, endereco)')
+    .eq('id', user.id)
+    .single();
+
   return NextResponse.json({
     success: true,
     created: true,
+    usuario_sistema: createdProfile || null,
     clinica: { id: clinica.id, nome: body.clinica_nome },
     usuario: { id: user.id, nome: body.nutricionista_nome },
   });

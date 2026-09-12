@@ -79,6 +79,7 @@ export default function EditarPacientePage() {
         return;
       }
 
+      router.refresh();
       router.push(`/dashboard/pacientes/${id}`);
     } catch {
       setError('Erro de conexão');

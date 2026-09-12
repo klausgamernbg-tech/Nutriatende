@@ -95,6 +95,7 @@ function NovoPlanoContent() {
         return;
       }
 
+      router.refresh();
       router.push('/dashboard/planos');
     } catch (err: any) {
       setError(err.message || 'Erro ao criar plano');

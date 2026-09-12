@@ -88,6 +88,7 @@ export default function NovoPacientePage() {
       return;
     }
 
+    router.refresh();
     router.push(`/dashboard/pacientes/${result.data.id}`);
   };
 

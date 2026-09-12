@@ -110,8 +110,30 @@ export default function ConfiguracoesPage() {
       setEditing(false);
       setNeedsSetup(false);
 
-      // Reload to get fresh data
-      setTimeout(() => window.location.reload(), 800);
+      // Update profile state directly from API response
+      if (data.usuario_sistema) {
+        setProfile(data.usuario_sistema);
+        const p = data.usuario_sistema;
+        const c = (p.clinica as any) || {};
+        let enderecoStr = '';
+        let telefoneStr = '';
+        if (c.endereco) {
+          if (typeof c.endereco === 'object') {
+            enderecoStr = c.endereco.endereco || '';
+            telefoneStr = c.endereco.telefone || '';
+          } else {
+            enderecoStr = String(c.endereco);
+          }
+        }
+        if (c.telefone) telefoneStr = c.telefone;
+        setSetupForm({
+          clinica_nome: c.nome || '',
+          clinica_cnpj: c.cnpj || '',
+          clinica_endereco: enderecoStr,
+          clinica_telefone: telefoneStr,
+          nutricionista_nome: p.nome || '',
+        });
+      }
     } catch (err) {
       setSetupError('Erro de conexão');
     } finally {

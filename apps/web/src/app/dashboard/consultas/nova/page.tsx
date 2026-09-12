@@ -4,11 +4,11 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function NovaConsultaPage() {
+function NovaConsultaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pacienteId = searchParams.get('paciente_id') || '';
@@ -26,6 +26,12 @@ export default function NovaConsultaPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (pacienteId && !formData.paciente_id) {
+      setFormData((prev) => ({ ...prev, paciente_id: pacienteId }));
+    }
+  }, [pacienteId, formData.paciente_id]);
 
   useEffect(() => {
     fetch('/api/pacientes/list?status=ativo')
@@ -71,7 +77,6 @@ export default function NovaConsultaPage() {
       }
 
       router.push('/dashboard/consultas');
-      router.refresh();
     } catch (err: any) {
       setError(err.message || 'Erro ao criar consulta');
     } finally {
@@ -223,5 +228,24 @@ export default function NovaConsultaPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 bg-gray-200 rounded w-1/3" />
+        <div className="h-64 bg-gray-200 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+export default function NovaConsultaPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <NovaConsultaContent />
+    </Suspense>
   );
 }

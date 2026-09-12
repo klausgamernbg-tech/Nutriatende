@@ -4,11 +4,11 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function NovoPlanoPage() {
+function NovoPlanoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pacienteId = searchParams.get('paciente_id') || '';
@@ -27,8 +27,13 @@ export default function NovoPlanoPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const [listError, setListError] = useState('');
+
+  useEffect(() => {
+    if (pacienteId && !formData.paciente_id) {
+      setFormData((prev) => ({ ...prev, paciente_id: pacienteId }));
+    }
+  }, [pacienteId, formData.paciente_id]);
 
   useEffect(() => {
     fetch('/api/pacientes/list')
@@ -54,9 +59,9 @@ export default function NovoPlanoPage() {
     setFormData((prev) => ({
       ...prev,
       calorias_meta: calorias,
-      proteinas_meta: String(Math.round((cal * 0.3) / 4)), // 30% protein
-      carboidratos_meta: String(Math.round((cal * 0.45) / 4)), // 45% carbs
-      gorduras_meta: String(Math.round((cal * 0.25) / 9)), // 25% fat
+      proteinas_meta: String(Math.round((cal * 0.3) / 4)),
+      carboidratos_meta: String(Math.round((cal * 0.45) / 4)),
+      gorduras_meta: String(Math.round((cal * 0.25) / 9)),
     }));
   };
 
@@ -91,7 +96,6 @@ export default function NovoPlanoPage() {
       }
 
       router.push('/dashboard/planos');
-      router.refresh();
     } catch (err: any) {
       setError(err.message || 'Erro ao criar plano');
     } finally {
@@ -278,5 +282,24 @@ export default function NovoPlanoPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 bg-gray-200 rounded w-1/3" />
+        <div className="h-64 bg-gray-200 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+export default function NovoPlanoPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <NovoPlanoContent />
+    </Suspense>
   );
 }

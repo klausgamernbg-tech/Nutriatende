@@ -1,12 +1,11 @@
 // ============================================================
-// Nutri Atende — Nova Consulta Page
+// Nutri Atende — Nova Consulta Page (via API routes)
 // ============================================================
 
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 export default function NovaConsultaPage() {
@@ -15,6 +14,7 @@ export default function NovaConsultaPage() {
   const pacienteId = searchParams.get('paciente_id') || '';
 
   const [pacientes, setPacientes] = useState<any[]>([]);
+  const [listError, setListError] = useState('');
   const [formData, setFormData] = useState({
     paciente_id: pacienteId,
     data: new Date().toISOString().split('T')[0],
@@ -28,13 +28,20 @@ export default function NovaConsultaPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from('paciente')
-      .select('id, nome')
-      .eq('status', 'ativo')
-      .order('nome')
-      .then(({ data }) => setPacientes(data || []));
+    fetch('/api/pacientes/list?status=ativo')
+      .then(async (r) => {
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({}));
+          throw new Error(body.error || `Erro ${r.status}`);
+        }
+        return r.json();
+      })
+      .then((json) => setPacientes(json.data || []))
+      .catch((err) => {
+        console.error('[Consultas] Erro ao buscar pacientes:', err);
+        setListError(err.message || 'Erro ao carregar pacientes');
+        setPacientes([]);
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,28 +50,23 @@ export default function NovaConsultaPage() {
     setError('');
 
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError('Não autenticado');
-        return;
-      }
-
-      const dataHora = `${formData.data}T${formData.hora}:00`;
-
-      const { error: insertError } = await supabase.from('consulta').insert({
-        paciente_id: formData.paciente_id,
-        nutricionista_id: user.id,
-        data_hora: dataHora,
-        tipo: formData.tipo,
-        status: 'agendada',
-        valor: formData.valor ? Number(formData.valor) : null,
-        duracao_minutos: Number(formData.duracao_minutos),
-        observacoes: formData.observacoes || null,
+      const res = await fetch('/api/consultas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paciente_id: formData.paciente_id,
+          data_hora: `${formData.data}T${formData.hora}:00`,
+          tipo: formData.tipo,
+          valor: formData.valor ? Number(formData.valor) : undefined,
+          duracao_minutos: Number(formData.duracao_minutos),
+          observacoes: formData.observacoes || undefined,
+        }),
       });
 
-      if (insertError) {
-        setError(insertError.message);
+      const result = await res.json();
+
+      if (!res.ok) {
+        setError(result.error || 'Erro ao criar consulta');
         return;
       }
 
@@ -106,6 +108,16 @@ export default function NovaConsultaPage() {
               </option>
             ))}
           </select>
+          {listError && (
+            <p className="text-sm text-red-500 mt-2">
+              ⚠️ {listError}
+            </p>
+          )}
+          {!listError && pacientes.length === 0 && (
+            <p className="text-sm text-gray-400 mt-2">
+              Nenhum paciente ativo encontrado. Cadastre um paciente primeiro.
+            </p>
+          )}
         </div>
 
         {/* Date and time */}

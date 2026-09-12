@@ -28,11 +28,23 @@ export default function NovoPlanoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const [listError, setListError] = useState('');
+
   useEffect(() => {
     fetch('/api/pacientes/list')
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({}));
+          throw new Error(body.error || `Erro ${r.status}`);
+        }
+        return r.json();
+      })
       .then((json) => setPacientes(json.data || []))
-      .catch(() => setPacientes([]));
+      .catch((err) => {
+        console.error('[Planos] Erro ao buscar pacientes:', err);
+        setListError(err.message || 'Erro ao carregar pacientes');
+        setPacientes([]);
+      });
   }, []);
 
   // Auto-calculate macros from calories (default distribution)
@@ -116,7 +128,12 @@ export default function NovoPlanoPage() {
               </option>
             ))}
           </select>
-          {pacientes.length === 0 && (
+          {listError && (
+            <p className="text-sm text-red-500 mt-2">
+              ⚠️ {listError}
+            </p>
+          )}
+          {!listError && pacientes.length === 0 && (
             <p className="text-sm text-gray-400 mt-2">
               Nenhum paciente encontrado. Cadastre um paciente primeiro.
             </p>

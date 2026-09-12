@@ -11,8 +11,13 @@ export const dynamic = 'force-dynamic';
 
 // GET /api/pacientes/list?status=ativo — Lightweight patient list for dropdowns
 export async function GET(request: NextRequest) {
-  const { auth, error } = await getAuthUser();
-  if (error) return error;
+  const result = await getAuthUser();
+  if (result.error) {
+    console.error('[Pacientes List] Auth failed - user not authenticated or profile missing');
+    return result.error;
+  }
+  const { auth } = result;
+  console.log('[Pacientes List] Auth OK, clinicaId:', auth.clinicaId);
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status'); // 'ativo', 'inativo', etc.
@@ -41,5 +46,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: queryError.message }, { status: 500 });
   }
 
+  console.log('[Pacientes List] Found', data?.length || 0, 'patients');
   return NextResponse.json({ data: data || [] });
 }

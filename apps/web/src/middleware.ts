@@ -92,39 +92,37 @@ export async function middleware(request: NextRequest) {
   );
 
   // Check if authenticated user has a profile (usuario_sistema)
-  if (user && !isPublicRoute && !isApiRoute && !isSetupRoute) {
-    const { data: profile } = await admin
+  // Also fetch clinica_id in one query to avoid N+1
+  let userProfile: { id: string; clinica_id?: string } | null = null;
+  if (user && !isPublicRoute) {
+    const { data } = await admin
       .from('usuario_sistema')
-      .select('id')
+      .select('id, clinica_id')
       .eq('id', user.id)
       .single();
+    userProfile = data;
+  }
 
-    // No profile → first-time user, go to setup
-    if (!profile) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/setup';
-      return NextResponse.redirect(url);
-    }
+  // No profile → first-time user, go to setup
+  if (user && !isPublicRoute && !isApiRoute && !isSetupRoute && !userProfile) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/setup';
+    return NextResponse.redirect(url);
   }
 
   // User with profile trying to access /setup → redirect to dashboard
-  if (user && isSetupRoute) {
-    const { data: profile } = await admin
-      .from('usuario_sistema')
-      .select('id')
-      .eq('id', user.id)
-      .single();
-
-    if (profile) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
-    }
+  if (user && isSetupRoute && userProfile) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/dashboard';
+    return NextResponse.redirect(url);
   }
 
-  // Pass user ID to downstream server components via header
+  // Pass user ID + clinica_id to downstream server components via headers
   if (user) {
     response.headers.set('x-user-id', user.id);
+    if (userProfile?.clinica_id) {
+      response.headers.set('x-user-clinica-id', userProfile.clinica_id);
+    }
   }
 
   return response;

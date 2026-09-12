@@ -1,12 +1,16 @@
-'use client';
+// ============================================================
+// Nutri Atende — Dashboard Page (Server Component)
+// ============================================================
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
 import { Card, CardHeader, CardTitle, CardContent } from '@/design-system/primitives/Card';
 import { Badge } from '@/design-system/primitives/Badge';
 import { Avatar } from '@/design-system/primitives/Avatar';
 import { EmptyState } from '@/design-system/primitives/EmptyState';
-import { LoadingState } from '@/design-system/primitives/LoadingState';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   let totalPacientes = 0;
@@ -19,40 +23,57 @@ export default async function DashboardPage() {
   try {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       const supabase = createAdminClient();
+      const headersList = headers();
+      const clinicaId = headersList.get('x-user-clinica-id');
 
       const todayStart = new Date().toISOString().split('T')[0];
       const tomorrowStart = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const now = new Date().toISOString();
 
+      // Helper: add clinica_id filter to a query
+      const byClinica = <T extends { eq: (col: string, val: string) => T }>(q: T) =>
+        clinicaId ? q.eq('clinica_id', clinicaId) : q;
+
       const results = await Promise.allSettled([
-        supabase.from('paciente').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
-        supabase
-          .from('consulta')
-          .select('*', { count: 'exact', head: true })
-          .eq('data_hora', todayStart)
-          .in('status', ['agendada', 'confirmada']),
-        supabase
-          .from('consulta')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'agendada')
-          .gte('data_hora', now),
-        supabase
-          .from('plano_alimentar')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'ativo'),
-        supabase
-          .from('consulta')
-          .select('*, paciente:paciente_id (nome, telefone)')
-          .gte('data_hora', todayStart)
-          .lt('data_hora', tomorrowStart)
-          .in('status', ['agendada', 'confirmada'])
-          .order('data_hora', { ascending: true })
-          .limit(10),
-        supabase
-          .from('paciente')
-          .select('id, nome, status, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5),
+        // 0: Total active patients
+        byClinica(
+          supabase.from('paciente').select('*', { count: 'exact', head: true }).eq('status', 'ativo')
+        ),
+        // 1: Consultations today
+        byClinica(
+          supabase.from('consulta').select('*', { count: 'exact', head: true })
+            .gte('data_hora', todayStart)
+            .lt('data_hora', tomorrowStart)
+            .in('status', ['agendada', 'confirmada'])
+        ),
+        // 2: Pending return consultations
+        byClinica(
+          supabase.from('consulta').select('*', { count: 'exact', head: true })
+            .eq('status', 'agendada')
+            .gte('data_hora', now)
+        ),
+        // 3: Active meal plans
+        byClinica(
+          supabase.from('plano_alimentar').select('*', { count: 'exact', head: true })
+            .eq('status', 'ativo')
+        ),
+        // 4: Today's consultation list
+        byClinica(
+          supabase.from('consulta')
+            .select('*, paciente:paciente_id (nome, telefone)')
+            .gte('data_hora', todayStart)
+            .lt('data_hora', tomorrowStart)
+            .in('status', ['agendada', 'confirmada'])
+            .order('data_hora', { ascending: true })
+            .limit(10)
+        ),
+        // 5: Recent patients
+        byClinica(
+          supabase.from('paciente')
+            .select('id, nome, status, created_at, clinica_id')
+            .order('created_at', { ascending: false })
+            .limit(5)
+        ),
       ]);
 
       if (results[0].status === 'fulfilled') totalPacientes = results[0].value.count ?? 0;

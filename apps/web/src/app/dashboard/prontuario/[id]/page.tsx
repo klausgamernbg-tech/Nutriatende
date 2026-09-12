@@ -3,8 +3,11 @@
 // ============================================================
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 export default async function ProntuarioDetailPage({
   params,
@@ -12,14 +15,21 @@ export default async function ProntuarioDetailPage({
   params: { id: string };
 }) {
   const supabase = createAdminClient();
+  const headersList = headers();
+  const clinicaId = headersList.get('x-user-clinica-id');
   const { id } = params;
 
   // Fetch patient
-  const { data: paciente, error } = await supabase
+  let patientQuery = supabase
     .from('paciente')
     .select('*, nutricionista:nutricionista_responsavel_id (nome, email)')
-    .eq('id', id)
-    .single();
+    .eq('id', id);
+
+  if (clinicaId) {
+    patientQuery = patientQuery.eq('clinica_id', clinicaId);
+  }
+
+  const { data: paciente, error } = await patientQuery.single();
 
   if (error || !paciente) {
     notFound();

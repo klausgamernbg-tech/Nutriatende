@@ -3,8 +3,11 @@
 // ============================================================
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 export default async function PacienteDetailPage({
   params,
@@ -12,10 +15,12 @@ export default async function PacienteDetailPage({
   params: { id: string };
 }) {
   const supabase = createAdminClient();
+  const headersList = headers();
+  const clinicaId = headersList.get('x-user-clinica-id');
   const { id } = params;
 
   // Fetch patient with relations
-  const { data: paciente, error } = await supabase
+  let patientQuery = supabase
     .from('paciente')
     .select(
       `
@@ -23,8 +28,13 @@ export default async function PacienteDetailPage({
       nutricionista:nutricionista_responsavel_id (nome, email)
     `
     )
-    .eq('id', id)
-    .single();
+    .eq('id', id);
+
+  if (clinicaId) {
+    patientQuery = patientQuery.eq('clinica_id', clinicaId);
+  }
+
+  const { data: paciente, error } = await patientQuery.single();
 
   if (error || !paciente) {
     notFound();

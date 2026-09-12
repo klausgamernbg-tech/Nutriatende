@@ -4,11 +4,26 @@
 
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
 
 export default async function PlanosPage() {
   const supabase = createAdminClient();
+  const headersList = headers();
+  const clinicaId = headersList.get('x-user-clinica-id');
 
-  const { data: planos, count } = await supabase
+  // Get patient IDs for this clinic to filter plans
+  let pacienteFilter: string[] | null = null;
+  if (clinicaId) {
+    const { data: clinicPatients } = await supabase
+      .from('paciente')
+      .select('id')
+      .eq('clinica_id', clinicaId);
+    pacienteFilter = clinicPatients?.map((p) => p.id) ?? [];
+  }
+
+  let query = supabase
     .from('plano_alimentar')
     .select(
       `
@@ -19,6 +34,12 @@ export default async function PlanosPage() {
     )
     .order('created_at', { ascending: false })
     .limit(50);
+
+  if (pacienteFilter && pacienteFilter.length > 0) {
+    query = query.in('paciente_id', pacienteFilter);
+  }
+
+  const { data: planos, count } = await query;
 
   return (
     <div className="space-y-6">

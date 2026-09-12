@@ -3,7 +3,10 @@
 // ============================================================
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 export default async function PacientesPage({
   searchParams,
@@ -11,6 +14,8 @@ export default async function PacientesPage({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const supabase = createAdminClient();
+  const headersList = headers();
+  const clinicaId = headersList.get('x-user-clinica-id');
 
   const page = Number(searchParams.page) || 1;
   const limit = 20;
@@ -29,6 +34,10 @@ export default async function PacientesPage({
     )
     .order('nome', { ascending: true })
     .range(offset, offset + limit - 1);
+
+  if (clinicaId) {
+    query = query.eq('clinica_id', clinicaId);
+  }
 
   if (search) {
     query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%`);

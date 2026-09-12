@@ -4,16 +4,27 @@
 
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
 
 export default async function ProntuarioPage() {
   const supabase = createAdminClient();
+  const headersList = headers();
+  const clinicaId = headersList.get('x-user-clinica-id');
 
   // Get patients with their last consultation
-  const { data: pacientes } = await supabase
+  let query = supabase
     .from('paciente')
     .select('id, nome, status, created_at')
     .order('nome', { ascending: true })
     .limit(50);
+
+  if (clinicaId) {
+    query = query.eq('clinica_id', clinicaId);
+  }
+
+  const { data: pacientes } = await query;
 
   return (
     <div className="space-y-6">

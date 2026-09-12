@@ -4,6 +4,9 @@
 
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { headers } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
 
 export default async function ConsultasPage({
   searchParams,
@@ -11,6 +14,8 @@ export default async function ConsultasPage({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const supabase = createAdminClient();
+  const headersList = headers();
+  const clinicaId = headersList.get('x-user-clinica-id');
 
   const page = Number(searchParams.page) || 1;
   const limit = 20;
@@ -28,6 +33,10 @@ export default async function ConsultasPage({
     )
     .order('data_hora', { ascending: false })
     .range(offset, offset + limit - 1);
+
+  if (clinicaId) {
+    query = query.eq('clinica_id', clinicaId);
+  }
 
   if (status) {
     query = query.eq('status', status);

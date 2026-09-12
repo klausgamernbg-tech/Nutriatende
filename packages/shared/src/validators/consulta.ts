@@ -10,7 +10,12 @@ import { z } from 'zod';
 
 export const createConsultaSchema = z.object({
   paciente_id: z.string().uuid('ID do paciente inválido'),
-  data_hora: z.string().datetime('Data/hora inválida'),
+  data_hora: z
+    .string()
+    .refine(
+      (val) => !isNaN(Date.parse(val)),
+      'Data/hora inválida'
+    ),
   duracao_minutos: z
     .number()
     .int()
